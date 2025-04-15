@@ -4,7 +4,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Python Version](https://img.shields.io/badge/Python-3.9%2B-blue)](https://www.python.org/)
-[![GitHub stars](https://img.shields.io/github/stars/your-org/prismdb?style=social)](https://github.com/nexiouscaliver/Prism-DB)
+[![GitHub stars](https://img.shields.io/github/stars/nexiouscaliver/Prism-DB?style=social)](https://github.com/nexiouscaliver/Prism-DB)
 
 ---
 
@@ -101,4 +101,3 @@ Distributed under the MIT License. See [LICENSE](LICENSE) for details.
 **PrismDB** isn’t just a tool—it’s a **new lens for data interaction**.  
 Let’s make databases as intuitive as a conversation. ⚡️  
 
----
