@@ -172,3 +172,14 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+
+
+# Ignore all files in the data directory
+data/*
+
+# Ignore all files in the logs directory
+logs/*
+
+# Ignore the venv directory
+prism.venv/
+.cursor/
