@@ -1,4 +1,4 @@
-# PrismDB 🌈
+# PrismDB 🗄️🤖📂
 
 **Transform Natural Language into Data Insights, Like Light into a Rainbow**
 
