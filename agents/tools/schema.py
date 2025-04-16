@@ -6,7 +6,7 @@ This module provides tools for agents to retrieve, understand, and map database 
 from typing import Dict, Any, List, Optional, Union
 import json
 
-from agno.tools.base import BaseTool
+from agents.tools.base import BaseTool
 from sqlalchemy import create_engine, inspect, MetaData, Table, Column
 from sqlalchemy.exc import SQLAlchemyError
 

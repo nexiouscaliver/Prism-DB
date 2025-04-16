@@ -7,7 +7,7 @@ and interact with database connections.
 from typing import Dict, Any, List, Optional
 import json
 
-from agno.tools.base import BaseTool
+from agents.tools.base import BaseTool
 from sqlalchemy import create_engine, text
 from sqlalchemy.exc import SQLAlchemyError
 
