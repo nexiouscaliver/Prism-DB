@@ -11,6 +11,7 @@ import structlog
 from flask import Flask, jsonify
 from flask_jwt_extended import JWTManager
 from flask_sqlalchemy import SQLAlchemy
+from flask_cors import CORS
 import asyncio
 from sqlalchemy import text
 
@@ -40,6 +41,9 @@ def create_app(config: Optional[Dict[str, Any]] = None) -> Flask:
         A configured Flask application instance.
     """
     app = Flask(__name__)
+
+    # Enable CORS
+    CORS(app, resources={r"/api/*": {"origins": ["http://localhost:8000", "http://127.0.0.1:8000"]}})
 
     # Load default configuration from config module
     from app.config import DATABASE_URL, SECRET_KEY, JWT_SECRET_KEY, configure_api_keys
