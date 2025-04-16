@@ -10,9 +10,8 @@ from typing import Any, Dict, List, Optional, Union
 import google.generativeai as genai
 from app.config import GOOGLE_API_KEY, get_model_config
 
-# Make sure the Google API key is configured
-if not genai.get_default_api_key():
-    genai.configure(api_key=GOOGLE_API_KEY)
+# Configure Google API key
+genai.configure(api_key=GOOGLE_API_KEY)
 
 
 class GeminiModelAdapter:
