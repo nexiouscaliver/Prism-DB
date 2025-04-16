@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import React from "react";
 import Image from "next/image";
@@ -7,10 +7,6 @@ import { motion } from "framer-motion";
 import Navbar from "../components/Navbar";
 import { Cover } from "@/components/ui/cover";
 import { HoverEffect } from "@/components/ui/card-hover-effect";
-// import { GradientBackground } from "@/components/ui/gradient-background";
-// import { InfiniteMovingCards } from "@/components/ui/infinite-moving-cards";
-// import { Button } from "@/components/ui/button";
-// import { CardSpotlight } from "@/components/ui/card-spotlight";
 
 export default function Home() {
   return (    
