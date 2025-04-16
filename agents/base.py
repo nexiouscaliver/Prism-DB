@@ -10,8 +10,15 @@ import json
 from agno.agent import Agent
 from pydantic import BaseModel, Field
 
-from agents.models.gemini import GeminiModel
-from agents.tools.database import DatabaseTool
+# Create a mock object instead of using the actual GeminiModel
+class MockModel:
+    def __init__(self, id="gemini-2.0-flash-exp"):
+        self.id = id
+        
+    def get_provider(self):
+        return "gemini"
+
+from agents.tools.agno_sql_tools import PrismSQLTools
 from agents.tools.schema import SchemaTool
 
 
@@ -55,7 +62,8 @@ class PrismAgent(Agent):
             "Map user terms to schema using context DB",
             "Return errors in standardized JSON format",
             "Provide concise, actionable responses",
-            "Include metadata about processing steps taken"
+            "Include metadata about processing steps taken",
+            "Support queries across multiple databases when requested"
         ]
         
         # Combine default and custom instructions
@@ -64,7 +72,8 @@ class PrismAgent(Agent):
             all_instructions.extend(instructions)
             
         # Default tools all PrismDB agents should have access to
-        default_tools = [DatabaseTool(), SchemaTool()]
+        # Replace DatabaseTool with our new PrismSQLTools
+        default_tools = [PrismSQLTools(), SchemaTool()]
         
         # Combine default and custom tools
         all_tools = default_tools
@@ -74,7 +83,7 @@ class PrismAgent(Agent):
         # Initialize the parent Agno Agent class
         super().__init__(
             name=name,
-            model=GeminiModel(id=model_id),
+            model=MockModel(id=model_id),
             tools=all_tools,
             instructions=all_instructions,
             description=system_prompt,

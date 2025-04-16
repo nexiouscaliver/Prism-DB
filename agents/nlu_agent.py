@@ -8,7 +8,7 @@ from typing import Dict, Any, List, Optional, Union, Tuple
 import json
 import re
 
-from agno.models.google import GoogleModel
+from agno.models.google import Gemini
 from pydantic import BaseModel, Field, validator
 
 from agents.base import PrismAgent
@@ -66,18 +66,18 @@ class NLUAgent(PrismAgent):
     
     def __init__(
         self,
-        spacy_model: str = "en_core_web_lg",
+        spacy_model: str = "en_core_web_sm",
         transformer_model: str = "distilbert-base-uncased-finetuned-sst-2-english",
         connection_string: Optional[str] = None,
-        model_id: str = "gemini-2.0-flash-exp",
+        model_id: str = "gemini-2.0-flash",
     ):
         """Initialize the NLU Agent.
         
         Args:
-            spacy_model: SpaCy model to use for NER.
-            transformer_model: Hugging Face model to use for intent classification.
+            spacy_model: SpaCy model to use for NER (not used - kept for compatibility).
+            transformer_model: Hugging Face model to use for intent classification (not used - kept for compatibility).
             connection_string: Database connection string.
-            model_id: OpenAI model identifier to use.
+            model_id: Gemini model identifier to use.
         """
         # NLU-specific instructions
         nlu_instructions = [
@@ -116,31 +116,9 @@ class NLUAgent(PrismAgent):
             model_id=model_id
         )
         
-        # Load SpaCy model
-        try:
-            import spacy
-            self.nlp = spacy.load(spacy_model)
-        except ImportError:
-            self.add_memory("WARNING: SpaCy not installed. Using fallback NLP processing.")
-            self.nlp = None
-        except OSError:
-            self.add_memory(f"WARNING: SpaCy model {spacy_model} not found. Using fallback NLP processing.")
-            self.nlp = None
-        
-        # Load transformer model for intent classification
-        try:
-            import torch
-            from transformers import AutoTokenizer, AutoModelForSequenceClassification
-            self.tokenizer = AutoTokenizer.from_pretrained(transformer_model)
-            self.intent_model = AutoModelForSequenceClassification.from_pretrained(transformer_model)
-        except ImportError:
-            self.add_memory("WARNING: Hugging Face Transformers not installed. Using fallback intent classification.")
-            self.tokenizer = None
-            self.intent_model = None
-        except OSError:
-            self.add_memory(f"WARNING: Transformer model {transformer_model} not found. Using fallback intent classification.")
-            self.tokenizer = None
-            self.intent_model = None
+        # Note: We'll use Gemini for NLP processing and intent classification instead of SpaCy/Hugging Face
+        # Just print a message to inform users but don't try to load those libraries
+        print("Using Gemini model for NLP processing and intent classification")
             
         # Load database schema if connection string is provided
         self.schema_loaded = False
@@ -159,7 +137,7 @@ class NLUAgent(PrismAgent):
                 # Add schema information to agent memory
                 schema_info = f"Database contains {len(tables)} tables: "
                 schema_info += ", ".join([table["name"] for table in tables])
-                self.add_memory(f"SCHEMA INFO: {schema_info}")
+                print(f"SCHEMA INFO: {schema_info}")
                 
                 # For each table, get detailed schema information
                 for table in tables:
@@ -178,13 +156,13 @@ class NLUAgent(PrismAgent):
                         # Add table schema to agent memory
                         table_info = f"Table {table_name} has columns: "
                         table_info += ", ".join(columns_info)
-                        self.add_memory(f"TABLE SCHEMA: {table_info}")
+                        print(f"TABLE SCHEMA: {table_info}")
                 
                 self.schema_loaded = True
             else:
-                self.add_memory(f"ERROR: Failed to load schema: {result.get('message', 'Unknown error')}")
+                print(f"ERROR: Failed to load schema: {result.get('message', 'Unknown error')}")
         except Exception as e:
-            self.add_memory(f"ERROR: Exception loading schema: {str(e)}")
+            print(f"ERROR: Exception loading schema: {str(e)}")
     
     def _extract_entities_spacy(self, query: str) -> List[Dict[str, Any]]:
         """Extract entities using SpaCy.
@@ -476,60 +454,85 @@ class NLUAgent(PrismAgent):
         return context_needs
             
     def process_query(self, query: str, context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-        """Process a natural language query and extract structured information.
+        """Process a natural language query.
         
         Args:
-            query: Natural language query to process.
-            context: Optional context information.
+            query: Natural language query.
+            context: Additional context for query processing.
             
         Returns:
             Structured NLU response.
         """
+        # Log query processing start
+        print(f"Processing query: {query}")
+        if context:
+            print(f"With context: {json.dumps(context, indent=2)}")
+        
+        # Normalize query by trimming whitespace and converting to lowercase
+        processed_query = query.strip()
+        original_query = query
+        
+        # Use the Gemini model to process the entire query
+        # This will handle intent classification, entity extraction, and ambiguity detection
+        prompt = f"""
+        Process this database query: "{query}"
+        
+        Classify the intent and extract all entities. Identify any ambiguities and determine additional context needed.
+        
+        Allowed intents: data_retrieval, report_generation, trend_analysis, comparison, aggregation, prediction, anomaly_detection, unknown
+        
+        Return your analysis in the following JSON format:
+        {{
+            "intent": "one of the allowed intents",
+            "confidence": 0.0 to 1.0,
+            "entities": [
+                {{"name": "entity name", "value": "entity value", "type": "entity type"}}
+            ],
+            "context_needs": ["list of additional context needed"],
+            "ambiguities": ["list of ambiguities"],
+            "processed_query": "normalized query",
+            "original_query": "original query",
+            "suggested_sql": "SQL query if applicable"
+        }}
+        """
+        
+        # Use the Gemini model to process the query
         try:
-            # Clean and normalize the query text
-            processed_query = query.strip()
+            # Create the model instance with the current model_id
+            model = Gemini(id=self.model_id)
             
-            # Extract entities using SpaCy if available
-            entities = self._extract_entities_spacy(processed_query)
+            # Get structured response from model
+            response = model.complete(prompt=prompt, response_format={"type": "json_object"})
+            result = json.loads(response.text)
             
-            # Classify intent
-            if self.tokenizer is not None and self.intent_model is not None:
-                intent, confidence = self._classify_intent_transformers(processed_query)
-            else:
-                intent, confidence = self._classify_intent_fallback(processed_query)
-                
-            # Detect ambiguities
-            ambiguities = self._detect_ambiguities(processed_query, entities)
-            
-            # Determine additional context needs
-            context_needs = self._determine_context_needs(processed_query, intent, entities)
-            
-            # Create Pydantic entities
-            entity_models = []
-            for entity in entities:
-                entity_models.append(Entity(
-                    name=entity["name"],
-                    value=entity["value"],
-                    type=entity["type"]
-                ))
-                
-            # Create and validate NLU response
-            response = NLUResponse(
-                intent=intent,
-                confidence=confidence,
-                entities=entity_models,
-                context_needs=context_needs,
-                ambiguities=ambiguities,
-                processed_query=processed_query,
-                original_query=query
+            # Validate the response using the Pydantic model
+            validated_response = NLUResponse(
+                intent=result.get("intent", "unknown"),
+                confidence=result.get("confidence", 0.7),
+                entities=[Entity(**entity) for entity in result.get("entities", [])],
+                context_needs=result.get("context_needs", []),
+                ambiguities=result.get("ambiguities", []),
+                processed_query=result.get("processed_query", processed_query),
+                original_query=original_query,
+                suggested_sql=result.get("suggested_sql")
             )
             
-            # Return the validated response
-            return json.loads(response.json())
+            return validated_response.dict()
             
         except Exception as e:
-            # Return error response
-            return json.loads(self.error_response(f"Error processing query: {str(e)}"))
+            print(f"Error processing query with Gemini: {str(e)}")
+            
+            # Fallback to a simpler response if the Gemini model fails
+            return {
+                "intent": "unknown",
+                "confidence": 0.5,
+                "entities": [],
+                "context_needs": ["database schema"],
+                "ambiguities": ["Could not determine intent reliably"],
+                "processed_query": processed_query,
+                "original_query": original_query,
+                "suggested_sql": None
+            }
             
     def process(self, input_text: str, context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """Process a query with the NLU agent and return structured information.
