@@ -24,14 +24,15 @@ if __name__ == "__main__":
     
     port = int(os.environ.get("PORT", 5000))
     debug = os.environ.get("FLASK_ENV", "development") == "development"
+    model = os.environ.get("DEFAULT_MODEL", "gemini-2.0-flash")
     
     logger.info("Starting PrismDB application", 
                 port=port, 
                 debug=debug, 
                 environment=os.environ.get("FLASK_ENV", "development"),
-                model="gemini-2.0-flash-exp")
+                model=model)
     
-    print("\033[92m✓\033[0m PrismDB is running with Gemini Flash 2.0 model")
+    print(f"\033[92m✓\033[0m PrismDB is running with {model} model")
     print(f"\033[92m✓\033[0m Server is running at: http://localhost:{port}")
     
     app.run(host="0.0.0.0", port=port, debug=debug) 
