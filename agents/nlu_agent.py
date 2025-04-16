@@ -7,12 +7,14 @@ including intent classification and entity extraction.
 from typing import Dict, Any, List, Optional, Union, Tuple
 import json
 import re
+import os
 
 from agno.models.google import Gemini
 from pydantic import BaseModel, Field, validator
 
 from agents.base import PrismAgent
 from agents.tools.schema import SchemaTool
+from app.config import GOOGLE_API_KEY
 
 
 # Define Pydantic models for structured responses
@@ -119,6 +121,8 @@ class NLUAgent(PrismAgent):
         # Note: We'll use Gemini for NLP processing and intent classification instead of SpaCy/Hugging Face
         # Just print a message to inform users but don't try to load those libraries
         print("Using Gemini model for NLP processing and intent classification")
+
+        self.model_id = model_id
             
         # Load database schema if connection string is provided
         self.schema_loaded = False
@@ -472,67 +476,124 @@ class NLUAgent(PrismAgent):
         processed_query = query.strip()
         original_query = query
         
-        # Use the Gemini model to process the entire query
-        # This will handle intent classification, entity extraction, and ambiguity detection
-        prompt = f"""
-        Process this database query: "{query}"
-        
-        Classify the intent and extract all entities. Identify any ambiguities and determine additional context needed.
-        
-        Allowed intents: data_retrieval, report_generation, trend_analysis, comparison, aggregation, prediction, anomaly_detection, unknown
-        
-        Return your analysis in the following JSON format:
-        {{
-            "intent": "one of the allowed intents",
-            "confidence": 0.0 to 1.0,
-            "entities": [
-                {{"name": "entity name", "value": "entity value", "type": "entity type"}}
-            ],
-            "context_needs": ["list of additional context needed"],
-            "ambiguities": ["list of ambiguities"],
-            "processed_query": "normalized query",
-            "original_query": "original query",
-            "suggested_sql": "SQL query if applicable"
-        }}
-        """
-        
         # Use the Gemini model to process the query
         try:
-            # Create the model instance with the current model_id
-            model = Gemini(id=self.model_id)
+            # Use Google's direct generative AI library instead of the Agno wrapper
+            # This approach is more reliable for our specific use case
+            import google.generativeai as genai
             
-            # Get structured response from model
-            response = model.complete(prompt=prompt, response_format={"type": "json_object"})
-            result = json.loads(response.text)
+            # Configure the API
+            genai.configure(api_key=GOOGLE_API_KEY)
             
-            # Validate the response using the Pydantic model
-            validated_response = NLUResponse(
-                intent=result.get("intent", "unknown"),
-                confidence=result.get("confidence", 0.7),
-                entities=[Entity(**entity) for entity in result.get("entities", [])],
-                context_needs=result.get("context_needs", []),
-                ambiguities=result.get("ambiguities", []),
-                processed_query=result.get("processed_query", processed_query),
-                original_query=original_query,
-                suggested_sql=result.get("suggested_sql")
+            # Create the model
+            model = genai.GenerativeModel(
+                model_name=self.model_id,
+                generation_config={
+                    "temperature": 0.2,
+                    "top_p": 0.95,
+                    "top_k": 40,
+                    "max_output_tokens": 2048,
+                }
             )
             
-            return validated_response.dict()
+            # Update prompt to explicitly request JSON format
+            structured_prompt = f"""
+            Process this database query: "{query}"
+            
+            Classify the intent and extract all entities. Identify any ambiguities and determine additional context needed.
+            
+            Allowed intents: data_retrieval, report_generation, trend_analysis, comparison, aggregation, prediction, anomaly_detection, unknown
+            
+            IMPORTANT: Your response MUST be valid JSON. Do not include any explanations, markdown formatting, or text outside the JSON structure.
+            
+            Return your analysis in the following JSON format and nothing else:
+            {{
+                "intent": "one of the allowed intents",
+                "confidence": 0.0 to 1.0,
+                "entities": [
+                    {{"name": "entity name", "value": "entity value", "type": "entity type"}}
+                ],
+                "context_needs": ["list of additional context needed"],
+                "ambiguities": ["list of ambiguities"],
+                "processed_query": "normalized query",
+                "original_query": "{original_query}",
+                "suggested_sql": "SQL query if applicable"
+            }}
+            """
+            
+            # Generate the response with JSON formatting
+            response = model.generate_content(
+                structured_prompt,
+                generation_config={"response_mime_type": "application/json"}
+            )
+            
+            # Debug the response
+            print(f"Response type: {type(response)}")
+            print(f"Response attributes: {dir(response) if hasattr(response, '__dir__') else 'No dir method'}")
+            
+            # Get the text from the response
+            response_text = response.text
+            print(f"Response text: {response_text}")
+            
+            # Parse the JSON response
+            try:
+                # First clean the response text if it contains markdown code blocks
+                if "```json" in response_text:
+                    # Extract content between ```json and ```
+                    import re
+                    json_match = re.search(r'```json\s*(.*?)\s*```', response_text, re.DOTALL)
+                    if json_match:
+                        response_text = json_match.group(1)
+                        print(f"Extracted JSON from markdown: {response_text}")
+                
+                # Parse the JSON response
+                result = json.loads(response_text)
+                
+                # Validate the response using the Pydantic model
+                validated_response = NLUResponse(
+                    intent=result.get("intent", "unknown"),
+                    confidence=result.get("confidence", 0.7),
+                    entities=[Entity(**entity) for entity in result.get("entities", [])],
+                    context_needs=result.get("context_needs", []),
+                    ambiguities=result.get("ambiguities", []),
+                    processed_query=result.get("processed_query", processed_query),
+                    original_query=original_query,
+                    suggested_sql=result.get("suggested_sql")
+                )
+                
+                return validated_response.dict()
+                
+            except json.JSONDecodeError as e:
+                # If the content is not valid JSON, log the actual content for debugging
+                print(f"Error parsing JSON from Gemini response: {str(e)}")
+                print(f"Raw response content: {response_text}")
+                return self._create_fallback_response(processed_query, original_query)
             
         except Exception as e:
             print(f"Error processing query with Gemini: {str(e)}")
+            return self._create_fallback_response(processed_query, original_query)
+    
+    def _create_fallback_response(self, processed_query: str, original_query: str) -> Dict[str, Any]:
+        """Create a fallback response when the Gemini model fails.
+        
+        Args:
+            processed_query: The processed query text.
+            original_query: The original query text.
             
-            # Fallback to a simpler response if the Gemini model fails
-            return {
-                "intent": "unknown",
-                "confidence": 0.5,
-                "entities": [],
-                "context_needs": ["database schema"],
-                "ambiguities": ["Could not determine intent reliably"],
-                "processed_query": processed_query,
-                "original_query": original_query,
-                "suggested_sql": None
-            }
+        Returns:
+            A fallback NLU response.
+        """
+        # Fallback to a simpler response if the Gemini model fails
+        return {
+            "intent": "unknown",
+            "confidence": 0.5,
+            "entities": [],
+            "context_needs": ["database schema"],
+            "ambiguities": ["Could not determine intent reliably"],
+            "processed_query": processed_query,
+            "original_query": original_query,
+            "suggested_sql": None
+        }
             
     def process(self, input_text: str, context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """Process a query with the NLU agent and return structured information.
