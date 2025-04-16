@@ -5,11 +5,11 @@ This module provides a custom implementation of the Gemini model for the Agno fr
 """
 from typing import Any, Dict, List, Optional, Tuple, Union
 
-from agno.models.base import BaseModel
+from agno.models.base import Model
 from agents.adapters.gemini_adapter import GeminiModelAdapter
 
 
-class GeminiModel(BaseModel):
+class GeminiModel(Model):
     """Google Gemini model implementation for the Agno framework."""
     
     def __init__(self, id: str = "gemini-2.0-flash-exp"):
