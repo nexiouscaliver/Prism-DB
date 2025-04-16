@@ -15,8 +15,9 @@ export default function Navbar(){
     };
     
     return(        
-        <nav className="w-full py-6 bg-black bg-opacity-80 backdrop-blur-md">
-            <div className="max-w-4xl mx-auto flex justify-center items-center space-x-8">                  <Link 
+        <nav className="w-full py-6 bg-black bg-opacity-10 backdrop-blur-md">
+            <div className="max-w-4xl mx-auto flex justify-center items-center space-x-8">                  
+                <Link 
                     href="/"
                     onClick={(e) => {
                         e.preventDefault();

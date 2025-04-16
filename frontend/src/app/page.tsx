@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import Navbar from "../components/Navbar";
+import { Cover } from "@/components/ui/cover";
 import { HoverEffect } from "@/components/ui/card-hover-effect";
 // import { GradientBackground } from "@/components/ui/gradient-background";
 // import { InfiniteMovingCards } from "@/components/ui/infinite-moving-cards";
@@ -27,7 +28,7 @@ export default function Home() {
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.8, ease: "easeOut" }}
         >          
-          <h1 className="text-5xl font-bold mb-2 text-left">PrismDB</h1><br/>
+          <h1 className="text-5xl font-bold mb-2 text-left"><br /> <Cover> PrismDB </Cover></h1><br/>
           <h2 className="text-3xl font-semibold mb-4 text-left">Transform Natural Language</h2><br/>
           <p className="text-lg">
             PrismDB is a multi-agent framework that acts as a contextual prism for databases, 
