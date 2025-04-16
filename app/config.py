@@ -8,18 +8,36 @@ from typing import Dict, Any
 
 # Google API Configuration
 GOOGLE_API_KEY = os.environ.get("GOOGLE_API_KEY")
-DEFAULT_MODEL = "gemini-2.0-flash-exp"
+OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
+DEFAULT_MODEL = os.environ.get("DEFAULT_MODEL", "gemini-2.0-flash")
 
 # Database Configuration
 DATABASE_URL = os.environ.get("DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/prismdb")
+
+# Redis Configuration
+REDIS_URL = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
 
 # Application Configuration
 SECRET_KEY = os.environ.get("SECRET_KEY", "dev-key-change-in-production")
 JWT_SECRET_KEY = os.environ.get("JWT_SECRET_KEY", "jwt-dev-key-change-in-production")
 DEBUG = os.environ.get("FLASK_ENV", "development") == "development"
 
+# Token Configuration
+JWT_ACCESS_TOKEN_EXPIRES = 60 * 60  # 1 hour
+JWT_REFRESH_TOKEN_EXPIRES = 60 * 60 * 24 * 7  # 7 days
+
+# Rate Limiting
+RATE_LIMIT_REQUESTS = 10  # requests per minute
+RATE_LIMIT_WINDOW = 60  # seconds
+
 # Model Configuration
 MODEL_CONFIG = {
+    "gemini-2.0-flash": {
+        "temperature": 0.2,
+        "top_p": 0.95,
+        "top_k": 40,
+        "max_output_tokens": 2048,
+    },
     "gemini-2.0-flash-exp": {
         "temperature": 0.2,
         "top_p": 0.95,
