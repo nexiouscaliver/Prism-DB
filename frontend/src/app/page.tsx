@@ -15,19 +15,20 @@ export default function Home() {
   return (    
   <div className="header-container">
       <img src="logo.2.jpg" alt="Overlay image" className="nav-overlay-image" />
-      <div className="fixed top-0 left-0 right-0 z-10 w-full">
+      <div className="flex justify-center">
         <Navbar />
       </div>
       
       {/* Section 1: Hero */}
-      <section id="home" className="min-h-screen flex items-center">
+      <section id="home" className="min-h-[85vh] flex items-start pt-25">
         <motion.div 
           className="container mx-auto mt-16 px-6 text-white max-w-5xl"
           initial={{ y: 50, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.8, ease: "easeOut" }}
-        >          <h1 className="text-5xl font-bold mb-2 text-center">PrismDB</h1>
-          <h2 className="text-3xl font-semibold mb-4 text-center">Transform Natural Language</h2>
+        >          
+          <h1 className="text-5xl font-bold mb-2 text-left">PrismDB</h1><br/>
+          <h2 className="text-3xl font-semibold mb-4 text-left">Transform Natural Language</h2><br/>
           <p className="text-lg">
             PrismDB is a multi-agent framework that acts as a contextual prism for databases, 
             transforming raw natural language queries into structured insights, visual reports, 
