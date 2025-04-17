@@ -9,6 +9,7 @@ import json
 
 from agno.tools.sql import SQLTools
 from agents.tools.base import BaseTool
+from ai.tools.base import ToolResponseFormatter
 import logging
 
 from config.databases import DATABASES, DatabaseConfig
@@ -26,6 +27,7 @@ class PrismSQLTools(BaseTool):
         """Initialize the PrismSQLTools with connections to all configured databases."""
         super().__init__()
         self.sql_tools = {}
+        self.formatter = ToolResponseFormatter()
         self._initialize_connections()
         
     def _initialize_connections(self) -> None:
@@ -68,11 +70,13 @@ class PrismSQLTools(BaseTool):
         # Get the appropriate SQL tool
         sql_tool = self._get_sql_tool(db_id)
         if not sql_tool:
-            return {
-                "status": "error",
-                "message": f"Database '{db_id}' not found or not initialized",
-                "available_databases": list(self.sql_tools.keys())
-            }
+            return self.formatter.format_error_response(
+                message=f"Database '{db_id}' not found or not initialized",
+                errors=[{
+                    "type": "DatabaseError",
+                    "message": f"Database '{db_id}' not found or not initialized"
+                }],
+            )
         
         try:
             if action == "execute_query":
@@ -80,7 +84,13 @@ class PrismSQLTools(BaseTool):
                 params = kwargs.get("params", {})
                 
                 if not query:
-                    return {"status": "error", "message": "No query provided"}
+                    return self.formatter.format_error_response(
+                        message="No query provided",
+                        errors=[{
+                            "type": "ValidationError",
+                            "message": "query is required for execute_query action"
+                        }]
+                    )
                 
                 # Use Agno SQLTools to execute the query
                 result = await sql_tool.run(query=query, parameters=params)
@@ -90,23 +100,25 @@ class PrismSQLTools(BaseTool):
                     try:
                         # Try to parse the result as JSON
                         parsed_result = json.loads(result)
-                        return {
-                            "status": "success",
-                            "columns": parsed_result.get("columns", []),
-                            "rows": parsed_result.get("data", []),
-                            "row_count": len(parsed_result.get("data", []))
-                        }
+                        return self.formatter.format_success_response(
+                            message="Query executed successfully",
+                            data={
+                                "columns": parsed_result.get("columns", []),
+                                "rows": parsed_result.get("data", []),
+                                "row_count": len(parsed_result.get("data", []))
+                            }
+                        )
                     except json.JSONDecodeError:
                         # If not JSON, return as raw text
-                        return {
-                            "status": "success",
-                            "result": result
-                        }
+                        return self.formatter.format_success_response(
+                            message="Query executed successfully",
+                            data={"result": result}
+                        )
                 else:
-                    return {
-                        "status": "success",
-                        "result": result
-                    }
+                    return self.formatter.format_success_response(
+                        message="Query executed successfully",
+                        data={"result": result}
+                    )
                 
             elif action == "list_tables":
                 # Use Agno SQLTools to list tables
@@ -116,26 +128,32 @@ class PrismSQLTools(BaseTool):
                 try:
                     if isinstance(result, str):
                         parsed_result = json.loads(result)
-                        return {
-                            "status": "success",
-                            "tables": parsed_result.get("data", [])
-                        }
+                        return self.formatter.format_success_response(
+                            message="Tables listed successfully",
+                            data={"tables": parsed_result.get("data", [])}
+                        )
                     else:
-                        return {
-                            "status": "success",
-                            "tables": result
-                        }
+                        return self.formatter.format_success_response(
+                            message="Tables listed successfully",
+                            data={"tables": result}
+                        )
                 except json.JSONDecodeError:
-                    return {
-                        "status": "success",
-                        "result": result
-                    }
+                    return self.formatter.format_success_response(
+                        message="Tables listed successfully",
+                        data={"result": result}
+                    )
                 
             elif action == "get_table_schema":
                 table_name = kwargs.get("table_name")
                 
                 if not table_name:
-                    return {"status": "error", "message": "No table name provided"}
+                    return self.formatter.format_error_response(
+                        message="No table name provided",
+                        errors=[{
+                            "type": "ValidationError",
+                            "message": "table_name is required for get_table_schema action"
+                        }]
+                    )
                 
                 try:
                     # Use Agno SQLTools to get schema
@@ -146,53 +164,59 @@ class PrismSQLTools(BaseTool):
                     try:
                         if isinstance(result, str):
                             parsed_result = json.loads(result)
-                            return {
-                                "status": "success",
-                                "schema": parsed_result.get("data", [])
-                            }
+                            return self.formatter.format_success_response(
+                                message=f"Schema retrieved successfully for table '{table_name}'",
+                                data={"schema": parsed_result.get("data", [])}
+                            )
                         else:
-                            return {
-                                "status": "success",
-                                "schema": result
-                            }
+                            return self.formatter.format_success_response(
+                                message=f"Schema retrieved successfully for table '{table_name}'",
+                                data={"schema": result}
+                            )
                     except json.JSONDecodeError as e:
                         logger.error(f"Error parsing schema result for table {table_name}: {str(e)}")
-                        return {
-                            "status": "success",
-                            "result": result
-                        }
+                        return self.formatter.format_success_response(
+                            message=f"Schema retrieved successfully for table '{table_name}'",
+                            data={"result": result}
+                        )
                 except Exception as e:
                     logger.error(f"Error getting schema for table {table_name}: {str(e)}")
-                    return {
-                        "status": "error",
-                        "message": f"Error getting schema: {str(e)}",
-                        "table": table_name
-                    }
+                    return self.formatter.format_error_response(
+                        message=f"Error getting schema for table '{table_name}'",
+                        errors=[{
+                            "type": type(e).__name__,
+                            "message": str(e)
+                        }]
+                    )
                 
             elif action == "list_databases":
                 # Return the list of available databases
-                return {
-                    "status": "success",
-                    "databases": [
-                        {"id": db_id, "name": db_config.name, "type": db_config.type, "readonly": db_config.readonly}
-                        for db_id, db_config in [(db, next((d for d in DATABASES if d.id == db), None)) 
-                                              for db in self.sql_tools.keys()]
-                        if db_config is not None
-                    ]
-                }
+                databases = [
+                    {"id": db_id, "name": db_config.name, "type": db_config.type, "readonly": db_config.readonly}
+                    for db_id, db_config in [(db, next((d for d in DATABASES if d.id == db), None)) 
+                                          for db in self.sql_tools.keys()]
+                    if db_config is not None
+                ]
+                return self.formatter.format_success_response(
+                    message="Available databases listed successfully",
+                    data={"databases": databases}
+                )
                 
             else:
-                return {
-                    "status": "error",
-                    "message": f"Unknown action: {action}",
-                    "valid_actions": ["execute_query", "list_tables", "get_table_schema", "list_databases"]
-                }
+                return self.formatter.format_error_response(
+                    message=f"Unknown action: {action}",
+                    errors=[{
+                        "type": "ValidationError",
+                        "message": "Valid actions are: execute_query, list_tables, get_table_schema, list_databases"
+                    }]
+                )
                 
         except Exception as e:
             logger.error(f"Error executing SQL tool action '{action}': {str(e)}")
-            return {
-                "status": "error",
-                "message": f"Error: {str(e)}",
-                "action": action,
-                "db_id": db_id
-            } 
+            return self.formatter.format_error_response(
+                message=f"Error executing SQL tool action '{action}'",
+                errors=[{
+                    "type": type(e).__name__,
+                    "message": str(e)
+                }]
+            ) 

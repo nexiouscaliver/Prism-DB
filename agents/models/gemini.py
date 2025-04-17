@@ -12,14 +12,17 @@ from agents.adapters.gemini_adapter import GeminiModelAdapter
 class GeminiModel(Model):
     """Google Gemini model implementation for the Agno framework."""
     
-    def __init__(self, id: str = "gemini-2.0-flash-exp"):
+    def __init__(self, id: str = "gemini-2.0-flash-exp", api_key: Optional[str] = None, 
+                 generation_config: Optional[Dict[str, Any]] = None):
         """Initialize the Gemini model.
         
         Args:
             id: Model identifier for Gemini.
+            api_key: Optional API key for Gemini.
+            generation_config: Optional generation configuration.
         """
         super().__init__(id=id)
-        self.adapter = GeminiModelAdapter(model_id=id)
+        self.adapter = GeminiModelAdapter(model_id=id, api_key=api_key, generation_config=generation_config)
     
     async def predict(
         self,

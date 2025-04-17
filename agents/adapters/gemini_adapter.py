@@ -10,33 +10,48 @@ from typing import Any, Dict, List, Optional, Union
 import google.generativeai as genai
 from app.config import GOOGLE_API_KEY, get_model_config
 
-# Configure Google API key
+# Configure Google API key (will be overridden if provided in constructor)
 genai.configure(api_key=GOOGLE_API_KEY)
 
 
 class GeminiModelAdapter:
     """Adapter class for Gemini models to work with Agno framework."""
     
-    def __init__(self, model_id: str = "gemini-2.0-flash-exp"):
+    def __init__(self, model_id: str = "gemini-2.0-flash-exp", api_key: Optional[str] = None,
+                 generation_config: Optional[Dict[str, Any]] = None):
         """Initialize the Gemini model adapter.
         
         Args:
             model_id: ID of the Gemini model to use.
+            api_key: Optional API key for Gemini.
+            generation_config: Optional generation configuration.
         """
         self.model_id = model_id
         self.config = get_model_config(model_id)
         
+        # Override API key if provided
+        if api_key:
+            genai.configure(api_key=api_key)
+        
         # Initialize the model
         try:
+            gen_config = {
+                "temperature": self.config["temperature"],
+                "top_p": self.config["top_p"],
+                "top_k": self.config["top_k"],
+                "max_output_tokens": self.config["max_output_tokens"],
+                "response_mime_type": "text/plain",
+            }
+            
+            # Override with user-provided generation config if available
+            if generation_config:
+                for key, value in generation_config.items():
+                    if key in gen_config:
+                        gen_config[key] = value
+                        
             self.model = genai.GenerativeModel(
                 model_name=model_id,
-                generation_config=genai.GenerationConfig(
-                    temperature=self.config["temperature"],
-                    top_p=self.config["top_p"],
-                    top_k=self.config["top_k"],
-                    max_output_tokens=self.config["max_output_tokens"],
-                    response_mime_type="text/plain",
-                )
+                generation_config=genai.GenerationConfig(**gen_config)
             )
         except Exception as e:
             raise ValueError(f"Failed to initialize Gemini model {model_id}: {str(e)}")

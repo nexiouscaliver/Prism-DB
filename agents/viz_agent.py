@@ -91,11 +91,21 @@ class VizAgent(PrismAgent):
             elif isinstance(data, pd.DataFrame):
                 df = data
             else:
-                return self.error_response("Invalid data format. Expected DataFrame, dict with 'rows', or list.")
+                # Return a proper dictionary instead of using self.error_response
+                return {
+                    "status": "error",
+                    "message": "Invalid data format. Expected DataFrame, dict with 'rows', or list.",
+                    "errors": [{"type": "format_error", "message": "Invalid data format"}]
+                }
             
             # Validate data is not empty
             if df.empty:
-                return self.error_response("No data available for visualization.")
+                # Return a proper dictionary instead of using self.error_response
+                return {
+                    "status": "error",
+                    "message": "No data available for visualization.",
+                    "errors": [{"type": "empty_data", "message": "No data available"}]
+                }
             
             # Generate visualization
             viz_result = self.generate_chart(df, chart_type, title=title)
@@ -105,12 +115,19 @@ class VizAgent(PrismAgent):
             viz_result["confidence"] = confidence
             viz_result["chart_type"] = chart_type
             
-            return self.success_response(
-                "Visualization generated successfully",
-                viz_result
-            )
+            # Return a proper dictionary instead of using self.success_response
+            return {
+                "status": "success",
+                "message": "Visualization generated successfully",
+                "data": viz_result
+            }
         except Exception as e:
-            return self.error_response(f"Failed to generate visualization: {str(e)}")
+            # Return a proper dictionary instead of using self.error_response
+            return {
+                "status": "error",
+                "message": f"Failed to generate visualization: {str(e)}",
+                "errors": [{"type": "processing_error", "message": str(e)}]
+            }
     
     def generate_chart(self, data: pd.DataFrame, chart_type: str, **kwargs) -> Dict[str, Any]:
         """Generate chart visualization from DataFrame.

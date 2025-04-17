@@ -8,18 +8,12 @@ from typing import List, Dict, Any, Optional, Union
 import json
 
 from agno.agent import Agent
+from agno.models.openai import OpenAIChat
+from agno.models.google import Gemini
+from agno.models.anthropic.claude import Claude
 from pydantic import BaseModel, Field
 
-# Create a mock object instead of using the actual GeminiModel
-class MockModel:
-    def __init__(self, id="gemini-2.0-flash-exp"):
-        self.id = id
-        
-    def get_provider(self):
-        return "gemini"
-
-from agents.tools.agno_sql_tools import PrismSQLTools
-from agents.tools.schema import SchemaTool
+from app.config import get_model_config, GOOGLE_API_KEY, OPENAI_API_KEY
 
 
 class AgentResponse(BaseModel):
@@ -45,7 +39,8 @@ class PrismAgent(Agent):
         tools: List[Any] = None,
         system_prompt: Optional[str] = None,
         instructions: Optional[List[str]] = None,
-        model_id: str = "gemini-2.0-flash-exp",
+        model_id: str = "gemini-2.0-flash",
+        model: Optional[Any] = None,
     ):
         """Initialize a PrismAgent.
         
@@ -54,16 +49,15 @@ class PrismAgent(Agent):
             tools: Additional tools to add to the agent beyond the default ones.
             system_prompt: Optional system prompt to override default.
             instructions: Optional list of instructions to add to defaults.
-            model_id: Google model identifier to use (default is Gemini Flash 2.0).
+            model_id: Model identifier to use.
+            model: Optional model instance to use instead of creating a new one.
         """
         # Default instructions all PrismDB agents should follow
         default_instructions = [
-            "Always validate SQL syntax before execution",
-            "Map user terms to schema using context DB",
+            "Always validate inputs before processing",
             "Return errors in standardized JSON format",
             "Provide concise, actionable responses",
-            "Include metadata about processing steps taken",
-            "Support queries across multiple databases when requested"
+            "Include metadata about processing steps taken"
         ]
         
         # Combine default and custom instructions
@@ -72,23 +66,64 @@ class PrismAgent(Agent):
             all_instructions.extend(instructions)
             
         # Default tools all PrismDB agents should have access to
-        # Replace DatabaseTool with our new PrismSQLTools
-        default_tools = [PrismSQLTools(), SchemaTool()]
+        default_tools = []
         
         # Combine default and custom tools
         all_tools = default_tools
         if tools:
             all_tools.extend(tools)
         
+        # Initialize the model if not provided
+        if model is None:
+            model = self._initialize_model(model_id)
+        
         # Initialize the parent Agno Agent class
         super().__init__(
             name=name,
-            model=MockModel(id=model_id),
+            model=model,
             tools=all_tools,
             instructions=all_instructions,
             description=system_prompt,
             debug_mode=True,  # Log detailed debugging info
         )
+    
+    def _initialize_model(self, model_id: str):
+        """Initialize a model based on the model_id.
+        
+        Args:
+            model_id: The model identifier.
+            
+        Returns:
+            Initialized model instance.
+        """
+        # Get model configuration from app config
+        model_config = get_model_config(model_id)
+        
+        # Initialize based on model type
+        if model_id.startswith("gpt-"):
+            return OpenAIChat(
+                id=model_id,
+                api_key=OPENAI_API_KEY,
+                temperature=model_config.get("temperature", 0.2),
+                top_p=model_config.get("top_p", 0.95)
+            )
+        elif model_id.startswith("claude-"):
+            return Claude(
+                id="anthropic.claude-3-5-sonnet-20240620-v1:0" if "3-5-sonnet" in model_id else model_id,
+                temperature=model_config.get("temperature", 0.2),
+                top_p=model_config.get("top_p", 0.95)
+            )
+        else:  # Default to Gemini models
+            return Gemini(
+                id=model_id,
+                api_key=GOOGLE_API_KEY,
+                generation_config={
+                    "temperature": model_config.get("temperature", 0.2),
+                    "top_p": model_config.get("top_p", 0.95),
+                    "top_k": model_config.get("top_k", 40),
+                    "max_output_tokens": model_config.get("max_output_tokens", 2048),
+                }
+            )
         
     def format_response(self, status: str, message: str, data: Any = None, errors: List[Dict[str, Any]] = None) -> str:
         """Format agent response in a standardized structure.
@@ -155,18 +190,55 @@ class PrismAgent(Agent):
                 for key, value in context.items():
                     self.add_memory(f"{key}: {json.dumps(value)}")
             
-            # Get response from Agno agent
-            response = self.generate(input_text)
+            # Get response from Agno agent with JSON output format
+            response = self.generate(
+                input_text, 
+                generation_config={"response_mime_type": "application/json"}
+            )
             
             # Parse the response - assuming it's in our JSON format
-            # If not, wrap it in a standard success response
             try:
-                parsed = json.loads(response)
+                # Handle different response types
+                if isinstance(response, str):
+                    # Check if the response is wrapped in markdown code blocks and clean it
+                    if response.strip().startswith("```") and response.strip().endswith("```"):
+                        # Extract the content between the code block markers
+                        lines = response.strip().split("\n")
+                        # Remove the first line (```json) and the last line (```)
+                        content_lines = lines[1:-1]
+                        response = "\n".join(content_lines)
+                    
+                    # Parse the JSON response
+                    parsed = json.loads(response)
+                elif isinstance(response, dict):
+                    # Already a dictionary
+                    parsed = response
+                else:
+                    # Convert to string and try to parse
+                    response_str = str(response)
+                    if response_str.strip().startswith("```") and response_str.strip().endswith("```"):
+                        lines = response_str.strip().split("\n")
+                        content_lines = lines[1:-1]
+                        response_str = "\n".join(content_lines)
+                    
+                    try:
+                        parsed = json.loads(response_str)
+                    except json.JSONDecodeError:
+                        # If parsing fails, wrap in a standard response
+                        return json.loads(self.success_response("Processing completed", {"result": response_str}))
+                
                 # Check if it has our expected keys
                 if not all(k in parsed for k in ["status", "message"]):
-                    return json.loads(self.success_response("Processing completed", {"result": response}))
+                    # Convert to our standard format
+                    result = {
+                        "status": "success",
+                        "message": "Processing completed",
+                        "data": parsed
+                    }
+                    return result
                 return parsed
             except json.JSONDecodeError:
+                # If not JSON, wrap it in a standard success response
                 return json.loads(self.success_response("Processing completed", {"result": response}))
                 
         except Exception as e:

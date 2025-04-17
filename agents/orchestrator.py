@@ -225,77 +225,133 @@ class Orchestrator:
         Returns:
             Query results.
         """
-        # Extract the target database ID from context if present
-        db_id = "default"
-        if context and "db_id" in context:
-            db_id = context["db_id"]
-        
-        # Check if this is a multi-database query
-        is_multi_db = False
-        if any(keyword in input_text.lower() for keyword in ["all databases", "every database", "across databases"]):
-            is_multi_db = True
-            return await self.process_multi_db_query(input_text, context)
-        
-        # Process the query
-        nlu_result = await self._run_nlu_agent(input_text, context.get("user_id") if context else None)
-        
-        # If NLU detected an error, return it
-        if nlu_result.get("status") == "error":
-            return nlu_result
-        
-        # Get the intent and entities from NLU
-        intent = nlu_result.get("data", {}).get("intent", {})
-        entities = nlu_result.get("data", {}).get("entities", [])
-        
-        # Get schema information for the database
-        schema_result = await self._run_schema_agent(db_id, context.get("user_id") if context else None)
-        
-        # If schema retrieval failed, return error
-        if schema_result.get("status") == "error":
-            return schema_result
-        
-        # Pass intent, entities, and schema to query agent
-        query_input = {
-            "intent": intent,
-            "entities": entities,
-            "schema": schema_result.get("data", {}),
-            "query": input_text,
-            "db_id": db_id
-        }
-        
-        # Run query agent to generate SQL
-        sql_result = await self._run_query_agent(query_input)
-        
-        # If SQL generation failed, return error
-        if sql_result.get("status") == "error":
-            return sql_result
-        
-        # Execute the SQL query on the specified database
-        sql_query = sql_result.get("data", {}).get("sql")
-        if not sql_query:
+        try:
+            # Extract the target database ID from context if present
+            db_id = "default"
+            if context and "db_id" in context:
+                db_id = context["db_id"]
+            
+            # Check if this is a multi-database query
+            is_multi_db = False
+            if any(keyword in input_text.lower() for keyword in ["all databases", "every database", "across databases"]):
+                is_multi_db = True
+                return await self.process_multi_db_query(input_text, context)
+            
+            # Process the query
+            nlu_result = await self._run_nlu_agent(input_text, context.get("user_id") if context else None)
+            
+            # If NLU detected an error, return it
+            if nlu_result.get("status") == "error":
+                return nlu_result
+            
+            # Get the intent and entities from NLU
+            # First check if the data is directly in the result or in a nested data field
+            intent = "unknown"
+            entities = []
+            
+            if "intent" in nlu_result:
+                intent = nlu_result.get("intent", "unknown")
+                entities = nlu_result.get("entities", [])
+            elif "data" in nlu_result and isinstance(nlu_result.get("data"), dict):
+                intent = nlu_result.get("data", {}).get("intent", "unknown")
+                entities = nlu_result.get("data", {}).get("entities", [])
+            
+            celery_logger.info(f"Extracted intent: {intent}, entities count: {len(entities)}")
+            
+            # Get schema information for the database
+            schema_result = await self._run_schema_agent(db_id, context.get("user_id") if context else None)
+            
+            # If schema retrieval failed, return error
+            if schema_result.get("status") == "error":
+                return schema_result
+            
+            # Extract schema data safely
+            schema_data = {}
+            if "data" in schema_result and isinstance(schema_result.get("data"), dict):
+                schema_data = schema_result.get("data", {})
+            
+            # Pass intent, entities, and schema to query agent
+            query_input = {
+                "intent": intent,
+                "entities": entities,
+                "schema": schema_data,
+                "query": input_text,
+                "db_id": db_id,
+                "max_tokens": 4096  # Default value for max_tokens
+            }
+            
+            # Run query agent to generate SQL
+            sql_result = await self._run_query_agent(query_input)
+            
+            # If SQL generation failed, return error
+            if sql_result.get("status") == "error":
+                return sql_result
+            
+            # Extract SQL query safely
+            sql_query = None
+            if "data" in sql_result and isinstance(sql_result.get("data"), dict):
+                sql_query = sql_result.get("data", {}).get("sql")
+            
+            if not sql_query:
+                return {
+                    "status": "error",
+                    "message": "Failed to generate SQL query from natural language input",
+                    "data": None
+                }
+            
+            # Get parameters for the query safely
+            params = {}
+            if "data" in sql_result and isinstance(sql_result.get("data"), dict):
+                params = sql_result.get("data", {}).get("parameters", {})
+            
+            # Execute the query on the database
+            try:
+                query_result = await self.query_agent.execute_query(sql_query, params, db_id=db_id)
+            except AttributeError as ae:
+                celery_logger.error(f"Query execution AttributeError: {str(ae)}")
+                return {
+                    "status": "error",
+                    "message": f"Query execution failed: {str(ae)}",
+                    "data": None,
+                    "errors": [{"type": "attribute_error", "message": str(ae)}]
+                }
+            except Exception as e:
+                celery_logger.error(f"Query execution error: {str(e)}")
+                return {
+                    "status": "error",
+                    "message": f"Query execution failed: {str(e)}",
+                    "data": None,
+                    "errors": [{"type": "execution_error", "message": str(e)}]
+                }
+            
+            # Prepare visualization if needed
+            if query_result.get("status") == "success" and "rows" in query_result:
+                try:
+                    viz_result = await self._run_visualization_agent({
+                        "sql_result": query_result,
+                        "query": input_text
+                    })
+                    
+                    # Add visualization to query result if successful
+                    if viz_result.get("status") == "success":
+                        query_result["visualization"] = viz_result.get("data", {})
+                except Exception as e:
+                    # If visualization fails, log it but continue with the query result
+                    celery_logger.error(f"Visualization error: {str(e)}")
+                    query_result["visualization_error"] = str(e)
+            
+            return query_result
+            
+        except Exception as e:
+            celery_logger.error(f"Query processing error: {str(e)}")
+            import traceback
+            traceback.print_exc()
             return {
                 "status": "error",
-                "message": "Failed to generate SQL query from natural language input"
+                "message": f"Query processing failed: {str(e)}",
+                "data": None,
+                "errors": [{"type": "processing_error", "message": str(e)}]
             }
-        
-        # Get parameters for the query
-        params = sql_result.get("data", {}).get("parameters", {})
-        
-        # Execute the query on the database
-        query_result = await self.query_agent.execute_query(sql_query, params, db_id=db_id)
-        
-        # Prepare visualization if needed
-        if query_result.get("status") == "success" and "rows" in query_result:
-            viz_result = await self._run_visualization_agent({
-                "sql_result": query_result,
-                "query": input_text
-            })
-            
-            # Add visualization to query result if successful
-            if viz_result.get("status") == "success":
-                query_result["visualization"] = viz_result.get("data", {})
-        
-        return query_result
 
     async def process_multi_db_query(self, input_text: str, context: Dict[str, Any] = None) -> Dict[str, Any]:
         """Process a natural language query across multiple databases.
@@ -307,77 +363,157 @@ class Orchestrator:
         Returns:
             Query results from multiple databases.
         """
-        # Process the query through NLU agent
-        nlu_result = await self._run_nlu_agent(input_text, context.get("user_id") if context else None)
-        
-        # If NLU detected an error, return it
-        if nlu_result.get("status") == "error":
-            return nlu_result
-        
-        # Get the intent and entities from NLU
-        intent = nlu_result.get("data", {}).get("intent", {})
-        entities = nlu_result.get("data", {}).get("entities", [])
-        
-        # Get available databases
-        available_dbs = self.query_agent.get_available_databases()
-        
-        # Get schema information for all available databases
-        schema_results = {}
-        for db_info in available_dbs:
-            db_id = db_info.get("id")
-            schema_result = await self._run_schema_agent(db_id, context.get("user_id") if context else None)
-            if schema_result.get("status") == "success":
-                schema_results[db_id] = schema_result.get("data", {})
-        
-        # If no schema information was retrieved, return error
-        if not schema_results:
+        try:
+            # Process the query through NLU agent
+            nlu_result = await self._run_nlu_agent(input_text, context.get("user_id") if context else None)
+            
+            # If NLU detected an error, return it
+            if nlu_result.get("status") == "error":
+                return nlu_result
+            
+            # Get the intent and entities from NLU
+            # First check if the data is directly in the result or in a nested data field
+            intent = "unknown"
+            entities = []
+            
+            if "intent" in nlu_result:
+                intent = nlu_result.get("intent", "unknown")
+                entities = nlu_result.get("entities", [])
+            elif "data" in nlu_result and isinstance(nlu_result.get("data"), dict):
+                intent = nlu_result.get("data", {}).get("intent", "unknown")
+                entities = nlu_result.get("data", {}).get("entities", [])
+            
+            celery_logger.info(f"Multi-DB query, extracted intent: {intent}, entities count: {len(entities)}")
+            
+            # Get available databases safely
+            try:
+                available_dbs = self.query_agent.get_available_databases()
+                if not available_dbs:
+                    celery_logger.warning("No available databases found")
+                    return {
+                        "status": "error",
+                        "message": "No available databases found",
+                        "data": None
+                    }
+            except AttributeError as ae:
+                celery_logger.error(f"Database listing AttributeError: {str(ae)}")
+                return {
+                    "status": "error",
+                    "message": f"Failed to list available databases: {str(ae)}",
+                    "data": None,
+                    "errors": [{"type": "attribute_error", "message": str(ae)}]
+                }
+            except Exception as e:
+                celery_logger.error(f"Database listing error: {str(e)}")
+                return {
+                    "status": "error",
+                    "message": f"Failed to list available databases: {str(e)}",
+                    "data": None,
+                    "errors": [{"type": "processing_error", "message": str(e)}]
+                }
+            
+            # Get schema information for all available databases
+            schema_results = {}
+            for db_info in available_dbs:
+                db_id = db_info.get("id")
+                if not db_id:
+                    celery_logger.warning(f"Database info missing id: {db_info}")
+                    continue
+                
+                schema_result = await self._run_schema_agent(db_id, context.get("user_id") if context else None)
+                if schema_result.get("status") == "success" and "data" in schema_result:
+                    schema_results[db_id] = schema_result.get("data", {})
+            
+            # If no schema information was retrieved, return error
+            if not schema_results:
+                return {
+                    "status": "error",
+                    "message": "Failed to retrieve schema information for any database",
+                    "data": None
+                }
+            
+            # First approach: generate a single SQL query that can run on most databases
+            # Choose a default schema if available, otherwise use the first one
+            default_schema = schema_results.get("default", None)
+            if not default_schema:
+                default_schema = next(iter(schema_results.values()))
+            
+            # Pass intent, entities, and schema to query agent
+            query_input = {
+                "intent": intent,
+                "entities": entities,
+                "schema": default_schema,
+                "query": input_text,
+                "multi_db": True,
+                "max_tokens": 4096  # Default value for max_tokens
+            }
+            
+            # Run query agent to generate SQL
+            sql_result = await self._run_query_agent(query_input)
+            
+            # If SQL generation failed, return error
+            if sql_result.get("status") == "error":
+                return sql_result
+            
+            # Extract SQL query safely
+            sql_query = None
+            if "data" in sql_result and isinstance(sql_result.get("data"), dict):
+                sql_query = sql_result.get("data", {}).get("sql")
+            
+            if not sql_query:
+                return {
+                    "status": "error",
+                    "message": "Failed to generate SQL query from natural language input",
+                    "data": None
+                }
+            
+            # Get parameters for the query safely
+            params = {}
+            if "data" in sql_result and isinstance(sql_result.get("data"), dict):
+                params = sql_result.get("data", {}).get("parameters", {})
+            
+            # Execute the query across all compatible databases
+            try:
+                query_results = await self.query_agent.execute_query_across_all(sql_query, params)
+            except AttributeError as ae:
+                celery_logger.error(f"Multi-DB query execution AttributeError: {str(ae)}")
+                return {
+                    "status": "error",
+                    "message": f"Multi-DB query execution failed: {str(ae)}",
+                    "data": None,
+                    "errors": [{"type": "attribute_error", "message": str(ae)}]
+                }
+            except Exception as e:
+                celery_logger.error(f"Multi-DB query execution error: {str(e)}")
+                return {
+                    "status": "error",
+                    "message": f"Multi-DB query execution failed: {str(e)}",
+                    "data": None,
+                    "errors": [{"type": "execution_error", "message": str(e)}]
+                }
+            
+            # Prepare a combined result
+            combined_result = {
+                "status": "success",
+                "message": f"Query executed across {len(query_results.get('results', {}))} databases",
+                "databases": available_dbs,
+                "results": query_results.get("results", {}),
+                "sql_query": sql_query,
+                "parameters": params
+            }
+            
+            return combined_result
+            
+        except Exception as e:
+            celery_logger.error(f"Multi-DB query processing error: {str(e)}")
+            import traceback
+            traceback.print_exc()
             return {
                 "status": "error",
-                "message": "Failed to retrieve schema information for any database"
+                "message": f"Multi-DB query processing failed: {str(e)}",
+                "data": None,
+                "errors": [{"type": "processing_error", "message": str(e)}]
             }
-        
-        # First approach: generate a single SQL query that can run on most databases
-        # Pass intent, entities, and schema to query agent
-        query_input = {
-            "intent": intent,
-            "entities": entities,
-            "schema": schema_results.get("default", next(iter(schema_results.values()))),
-            "query": input_text,
-            "multi_db": True
-        }
-        
-        # Run query agent to generate SQL
-        sql_result = await self._run_query_agent(query_input)
-        
-        # If SQL generation failed, return error
-        if sql_result.get("status") == "error":
-            return sql_result
-        
-        # Execute the SQL query across all databases
-        sql_query = sql_result.get("data", {}).get("sql")
-        if not sql_query:
-            return {
-                "status": "error",
-                "message": "Failed to generate SQL query from natural language input"
-            }
-        
-        # Get parameters for the query
-        params = sql_result.get("data", {}).get("parameters", {})
-        
-        # Execute the query across all compatible databases
-        query_results = await self.query_agent.execute_query_across_all(sql_query, params)
-        
-        # Prepare a combined result
-        combined_result = {
-            "status": "success",
-            "message": f"Query executed across {len(query_results.get('results', {}))} databases",
-            "databases": available_dbs,
-            "results": query_results.get("results", {}),
-            "sql_query": sql_query,
-            "parameters": params
-        }
-        
-        return combined_result
     
     async def _run_nlu_agent(self, query: str, user_id: str) -> Dict[str, Any]:
         """Run NLU agent to detect intent and entities.
@@ -397,12 +533,42 @@ class Orchestrator:
         # return await self._wait_for_task(result)
         
         # For development/testing, run directly
-        result = await asyncio.to_thread(
-            self.nlu_agent.process,
-            query,
-            {"user_id": user_id}
-        )
-        return result
+        try:
+            result = await asyncio.to_thread(
+                self.nlu_agent.process,
+                query,
+                {"user_id": user_id}
+            )
+            
+            # Validate result
+            if not isinstance(result, dict):
+                result_str = str(result)[:100] if result else "None"
+                celery_logger.error(f"NLU agent returned non-dict response: {result_str}")
+                return {
+                    "status": "error",
+                    "message": "NLU processing failed: invalid response format",
+                    "data": None,
+                    "errors": [{"type": "format_error", "message": "Expected dictionary response"}]
+                }
+                
+            return result
+        except AttributeError as e:
+            # Handle attribute errors specifically
+            celery_logger.error(f"NLU agent AttributeError: {str(e)}")
+            return {
+                "status": "error",
+                "message": f"NLU processing failed: {str(e)}",
+                "data": None,
+                "errors": [{"type": "attribute_error", "message": str(e)}]
+            }
+        except Exception as e:
+            celery_logger.error(f"NLU processing error: {str(e)}")
+            return {
+                "status": "error",
+                "message": f"NLU processing failed: {str(e)}",
+                "data": None,
+                "errors": [{"type": "processing_error", "message": str(e)}]
+            }
     
     async def _run_schema_agent(self, prism_id: str, user_id: str) -> Dict[str, Any]:
         """Run Schema agent to get schema information.
@@ -419,12 +585,51 @@ class Orchestrator:
         # return await self._wait_for_task(result)
         
         # For development/testing, run directly
-        result = await asyncio.to_thread(
-            self.schema_agent.process,
-            f"Get schema for prism {prism_id}",
-            {"prism_id": prism_id, "user_id": user_id}
-        )
-        return result
+        try:
+            # Call the schema agent process with the new interface
+            # The process method now directly takes database_name and optional table_names
+            database_name = prism_id  # Using prism_id as the database name
+            
+            # Get table names if they exist in the context, otherwise pass None
+            # This would typically come from a database registry in a real system
+            # For now, just pass None to get all tables
+            table_names = None
+            
+            result = await asyncio.to_thread(
+                self.schema_agent.process,
+                database_name,
+                table_names
+            )
+            
+            # Validate result
+            if not isinstance(result, dict):
+                result_str = str(result)[:100] if result else "None"
+                celery_logger.error(f"Schema agent returned non-dict response: {result_str}")
+                return {
+                    "status": "error",
+                    "message": "Schema processing failed: invalid response format",
+                    "data": {},
+                    "errors": [{"type": "format_error", "message": "Expected dictionary response"}]
+                }
+                
+            return result
+        except AttributeError as e:
+            # Handle attribute errors specifically
+            celery_logger.error(f"Schema agent AttributeError: {str(e)}")
+            return {
+                "status": "error",
+                "message": f"Schema processing failed: {str(e)}",
+                "data": {},
+                "errors": [{"type": "attribute_error", "message": str(e)}]
+            }
+        except Exception as e:
+            celery_logger.error(f"Schema processing error: {str(e)}")
+            return {
+                "status": "error",
+                "message": f"Schema processing failed: {str(e)}",
+                "data": {},
+                "errors": [{"type": "processing_error", "message": str(e)}]
+            }
     
     async def _run_query_agent(self, query_input: Dict[str, Any]) -> Dict[str, Any]:
         """Run Query agent to generate SQL.
@@ -440,17 +645,71 @@ class Orchestrator:
         # return await self._wait_for_task(result)
         
         # For development/testing, run directly
-        result = await asyncio.to_thread(
-            self.query_agent.process,
-            query_input["query"],
-            {
-                "intent": query_input["intent"],
-                "schema": query_input["schema"],
-                "max_tokens": query_input["max_tokens"],
-                "db_id": query_input["db_id"]
+        try:
+            # Create a context dictionary with all necessary parameters
+            context = {
+                "intent": query_input.get("intent", "unknown"),
+                "schema": query_input.get("schema", {}),
+                "max_tokens": query_input.get("max_tokens", 2048),
+                "db_id": query_input.get("db_id", "default")
             }
-        )
-        return result
+            
+            # Add multi_db flag if present
+            if "multi_db" in query_input:
+                context["multi_db"] = query_input["multi_db"]
+                
+            # Add any other parameters that might be in query_input
+            for key, value in query_input.items():
+                if key not in context and key != "query":
+                    context[key] = value
+            
+            result = await asyncio.to_thread(
+                self.query_agent.process,
+                query_input["query"],
+                context
+            )
+            
+            # Ensure we have a properly structured response
+            if isinstance(result, dict):
+                # Make sure result has a status field
+                if "status" not in result:
+                    result = {
+                        "status": "success",
+                        "message": "SQL generated successfully",
+                        "data": result
+                    }
+                
+                # Ensure data field exists
+                if "data" not in result and result.get("status") == "success":
+                    # Extract and restructure the fields
+                    sql_data = {}
+                    for key in ["sql", "prompt", "generated_sql", "confidence", "reasoning"]:
+                        if key in result:
+                            sql_data[key] = result[key]
+                    
+                    # Update the response structure
+                    result = {
+                        "status": "success",
+                        "message": "SQL generated successfully",
+                        "data": sql_data
+                    }
+            else:
+                # If result is not a dictionary, convert it to a properly structured response
+                result = {
+                    "status": "success",
+                    "message": "SQL generated successfully",
+                    "data": {"sql": str(result)}
+                }
+            
+            return result
+        except Exception as e:
+            celery_logger.error(f"Query generation error: {str(e)}")
+            return {
+                "status": "error",
+                "message": f"Query generation failed: {str(e)}",
+                "data": None,
+                "errors": [{"type": "processing_error", "message": str(e)}]
+            }
     
     async def _run_visualization_agent(self, sql_result: Dict[str, Any]) -> Dict[str, Any]:
         """Run visualization agent to generate charts from SQL results.

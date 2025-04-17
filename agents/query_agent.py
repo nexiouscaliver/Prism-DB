@@ -184,11 +184,12 @@ class QueryAgent(PrismAgent):
             )
             response = await self._call_openai_api(prompt)
         else:
-            # Use the Agno agent directly
+            # Use the Agno agent directly with structured output configuration
             response = await self.generate(
                 f"Generate a SQL query for database '{db_id}' from this question: {question}\n\n"
                 f"Database schema:\n{db_info}\n\n"
-                f"Return only the SQL query with no explanations."
+                f"Return only the SQL query with no explanations.",
+                generation_config={"response_mime_type": "text/plain"}
             )
         
         # Clean the generated SQL
@@ -288,27 +289,42 @@ class QueryAgent(PrismAgent):
                 prompt = SQL_PARAM_TEMPLATE.format(sql_query=sql)
                 response = await self._call_openai_api(prompt)
             else:
-                # Use the Agno agent
+                # Use the Agno agent with JSON response format
                 response = await self.generate(
                     f"Convert this SQL query to a parameterized version:\n\n"
                     f"{sql}\n\n"
-                    f"Extract parameters and return a JSON object with 'parameterized_sql' and 'parameters'."
+                    f"Extract parameters and return a JSON object with 'parameterized_sql' and 'parameters'.",
+                    generation_config={"response_mime_type": "application/json"}
                 )
             
             # Parse the response
             try:
-                # Strip any markdown or extra text
-                response = re.sub(r'```json\s*|\s*```', '', response)
-                
-                # Extract JSON object
-                json_match = re.search(r'{.*}', response, re.DOTALL)
-                if json_match:
-                    response = json_match.group(0)
-                
-                result = json.loads(response)
+                # Handle different response types
+                if isinstance(response, str):
+                    # Strip any markdown or extra text
+                    response = re.sub(r'```json\s*|\s*```', '', response)
+                    
+                    # Extract JSON object
+                    json_match = re.search(r'{.*}', response, re.DOTALL)
+                    if json_match:
+                        response = json_match.group(0)
+                    
+                    result = json.loads(response)
+                elif isinstance(response, dict):
+                    # Already a parsed dictionary
+                    result = response
+                else:
+                    # Try to get string representation and parse it
+                    response_str = str(response)
+                    response_str = re.sub(r'```json\s*|\s*```', '', response_str)
+                    json_match = re.search(r'{.*}', response_str, re.DOTALL)
+                    if json_match:
+                        response_str = json_match.group(0)
+                    result = json.loads(response_str)
                 
                 # Validate result structure
                 if not all(key in result for key in ["parameterized_sql", "parameters"]):
+                    # Return a properly structured dictionary if missing required fields
                     return {
                         "parameterized_sql": sql, 
                         "parameters": {}
@@ -318,6 +334,7 @@ class QueryAgent(PrismAgent):
                 
             except (json.JSONDecodeError, AttributeError) as e:
                 logger.error(f"Failed to parse parameterization response: {str(e)}")
+                # Return a properly structured dictionary on error
                 return {
                     "parameterized_sql": sql, 
                     "parameters": {}
@@ -325,6 +342,7 @@ class QueryAgent(PrismAgent):
                 
         except Exception as e:
             logger.error(f"Error parameterizing SQL: {str(e)}")
+            # Return a properly structured dictionary on error
             return {
                 "parameterized_sql": sql, 
                 "parameters": {}
@@ -400,13 +418,13 @@ class QueryAgent(PrismAgent):
             # Parameterize the SQL for secure execution
             param_result = await self._parameterize_sql(sql)
             
-            # Create result
+            # Create properly structured result that matches SQLGenerationInfo model
             return SQLGenerationInfo(
-                sql=param_result["parameterized_sql"],
-                original_sql=sql,
-                parameters=param_result["parameters"],
-                db_id=db_id,
-                explanation=f"Generated SQL for question: {question}"
+                prompt=question,
+                generated_sql=param_result["parameterized_sql"],
+                confidence=0.9,  # Default confidence score
+                reasoning=f"Generated SQL for question: {question}",
+                alternative_queries=None  # No alternative queries provided
             )
             
         except Exception as e:
