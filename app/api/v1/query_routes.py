@@ -7,6 +7,7 @@ import asyncio
 from flask import jsonify, request, abort
 from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
 from pydantic import ValidationError
+import json
 
 from app.api.v1 import bp
 from app import logger
@@ -65,7 +66,38 @@ async def generate_query():
         
         result = await orchestrator.process_query(query, context)
         
+        # Verify result is a valid JSON dictionary before returning
+        if not isinstance(result, dict):
+            logger.error("Invalid result type", type=str(type(result)), result=str(result)[:100])
+            return jsonify({
+                "status": "error",
+                "error": {
+                    "code": "PROCESSING_ERROR",
+                    "message": "Query processing returned an invalid format."
+                }
+            }), 500
+            
         return jsonify(result)
+        
+    except json.JSONDecodeError as je:
+        logger.error("JSON parsing error", error=str(je))
+        return jsonify({
+            "status": "error",
+            "error": {
+                "code": "JSON_PARSING_ERROR",
+                "message": "Error parsing JSON response from language model."
+            }
+        }), 500
+        
+    except AttributeError as ae:
+        logger.error("Attribute error", error=str(ae))
+        return jsonify({
+            "status": "error",
+            "error": {
+                "code": "ATTRIBUTE_ERROR",
+                "message": "An attribute error occurred while processing the request."
+            }
+        }), 500
         
     except Exception as e:
         logger.error("Query generation error", error=str(e))
@@ -133,7 +165,7 @@ async def generate_multi_db_query():
             }
         }), 500
 
-@bp.route("/databases", methods=["GET"])
+@bp.route("/query/databases", methods=["GET"], endpoint="query_list_databases")
 @jwt_required()
 async def list_databases():
     """List all available databases.
