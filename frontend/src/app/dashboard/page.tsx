@@ -30,10 +30,10 @@ export default function Dashboard() {
     const fetchDatabases = async () => {
       try {
         const response = await listDatabases();
-        if (response && response.databases) {
-          setDatabases(response.databases);
-          if (response.databases.length > 0) {
-            setSelectedDatabase(response.databases[0].id);
+        if (response && response.data && response.data.databases) {
+          setDatabases(response.data.databases);
+          if (response.data.databases.length > 0) {
+            setSelectedDatabase(response.data.databases[0].id);
           }
         }
       } catch (err) {
@@ -59,10 +59,22 @@ export default function Dashboard() {
       
       const response = await generateQuery(naturalLanguageQuery, selectedDatabase);
       
-      if (response && response.sql_info && response.sql_info.generated_sql) {
+      // Check for different response formats
+      if (response.sql_info && response.sql_info.generated_sql) {
+        // Legacy format
         setGeneratedSQL(response.sql_info.generated_sql);
+      } else if (response.sql) {
+        // New format - direct sql field
+        setGeneratedSQL(response.sql);
+      } else if (response.data && response.data.sql) {
+        // Alternative format with data wrapper
+        setGeneratedSQL(response.data.sql);
+      } else if (response.generated_sql) {
+        // Alternative format with generated_sql field
+        setGeneratedSQL(response.generated_sql);
       } else {
-        setError("Failed to generate SQL query");
+        console.error("Unexpected response format:", response);
+        setError(`Failed to generate SQL query: ${response.note || response.message || "Unexpected response format"}`);
       }
     } catch (err: any) {
       console.error("Error generating query:", err);

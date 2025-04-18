@@ -30,8 +30,8 @@ export default function DatabasesPage() {
         
         const response = await listDatabases();
         
-        if (response && response.databases) {
-          setDatabases(response.databases);
+        if (response && response.data && response.data.databases) {
+          setDatabases(response.data.databases);
         } else {
           setError("Failed to load databases");
         }
@@ -47,7 +47,9 @@ export default function DatabasesPage() {
   }, [router]);
   
   // Function to determine database status badge color
-  const getStatusColor = (status: string) => {
+  const getStatusColor = (status?: string) => {
+    if (!status) return "bg-blue-500/20 text-blue-400 border-blue-500/30"; // Default for undefined
+    
     switch (status.toLowerCase()) {
       case "connected":
         return "bg-green-500/20 text-green-400 border-green-500/30";
@@ -105,7 +107,7 @@ export default function DatabasesPage() {
                           <span 
                             className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium ${getStatusColor(db.connection_status)}`}
                           >
-                            {db.connection_status}
+                            {db.connection_status || (db.readonly ? "Read-only" : "Available")}
                           </span>
                         </div>
                         
