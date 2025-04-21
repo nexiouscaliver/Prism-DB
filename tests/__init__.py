@@ -1,3 +1,0 @@
-"""
-PrismDB Test Suite.
-""" 
