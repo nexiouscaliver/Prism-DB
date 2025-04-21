@@ -1,0 +1,155 @@
+/* rm_global.css */
+@page {
+    size: A4;
+    margin: 0;
+    /* DON'T CHANGE THIS */
+}
+
+body,
+html {
+    margin: 0mm;
+    padding: 0mm;
+    width: 100%;
+    height: 100%;
+    font-family: 'Times New Roman', sans-serif;
+    box-sizing: border-box;
+    background: linear-gradient(to right, rgb(227, 225, 221), rgb(238, 236, 232));
+    counter-reset: page;
+}
+
+*,
+*::before,
+*::after {
+    box-sizing: inherit;
+}
+
+@media print {
+    a[href]:after {
+        content: none !important;
+    }
+
+    /* Placeholder for the header */
+    .empty-header {
+        height: 60px;
+        /* Adjust height based on your header's height */
+    }
+
+    /* Placeholder for the footer */
+    .empty-footer {
+        height: 100px;
+        /* Adjust height based on your footer's height */
+    }
+
+    /* Actual Header styling */
+    .header {
+        width: 100%;
+        height: 10mm;
+        position: fixed;
+        top: 5px;
+        /* Position 5px from the top */
+        right: 25px;
+        /* Position 25px from the right */
+        left: 0;
+        text-align: right;
+        font-size: 10px;
+        padding-right: 10px;
+        z-index: 1000;
+        
+    }
+
+    /* Header content styling */
+    .header-content {
+        font-size: 12px;
+        color: #666;
+        text-align: right;
+    }
+
+    /* Actual Footer styling */
+    .footer {
+        width: 100%;
+        height: 10mm;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        text-align: center;
+        font-size: 10px;
+        z-index: 1000;
+        
+    }
+    /* Styling for the keai.ai text */
+    .footer .footer-text {
+        font-size: 13px;
+        color: rgb(124, 86, 150);
+        /* Add desired color for keai.ai */
+        text-align: center;
+    }
+
+    
+    .footer .page-number {
+        position: fixed;
+        /* Ensure it is fixed at the bottom */
+        right: 4mm;
+        bottom: 3mm;
+        font-size: 12px;
+        color: rgb(131, 124, 124);
+        counter-increment: page;
+        /* This line is essential for incrementing the page number */
+    }
+    
+
+    .footer .page-number:before {
+        content:  counter(page);
+    }
+
+    /* Table layout to avoid content overlapping. USE THIS to set skeletal structure */
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        table-layout: fixed;
+    }
+
+    thead th,
+    tfoot td {
+        height: 10mm;
+    }
+
+    /* Section styling with page breaks */
+    .section {
+        padding: 0.5in 1in 1in 1in;
+        /* Adjust width to account for right margin */
+        box-sizing: border-box;
+        background: linear-gradient(to right, rgb(227, 225, 221), rgb(238, 236, 232));
+        display: block;
+        margin-bottom: 1in;
+        page-break-after: always;
+        
+    }
+
+    .section-title {
+        font-size: 24px !important;
+        /* margin-bottom: 1in; */
+        color: rgb(108, 108, 108);
+        text-align: left;
+        /* max-width: 100%; */
+        margin-bottom: 10px;
+    }
+
+    .section-text {
+        font-size: 18px !important;
+        line-height: 1.8;
+        color: rgb(85, 85, 85);
+        text-align: left;
+        margin-top: 5mm;
+        margin-right: 0.5in;
+        margin-bottom: 1in;
+    }
+
+    /* Content styling */
+    .content {
+        padding: 0px 20px 20px 20px;
+        /* font-size: 17px; */
+        /* margin-right: 1in; */
+        /* Ensure right margin is applied */
+    }
+}

@@ -1,0 +1,55 @@
+/* section.css */
+
+@page rm_section {
+    margin: 1in 1in 2in 1in;
+    /* top, right, bottom, left */
+}
+
+/* Unified class to handle the entire section page styling */
+.section-page {
+    width: 100%;
+    box-sizing: border-box;
+    background: linear-gradient(to right, rgb(227, 225, 221), rgb(238, 236, 232));
+    /* Full-page background */
+    position: relative;
+    break-before: always;
+    /* Ensure content starts on a new page */
+    padding: 20mm 30mm 30mm 30mm;
+    /* Internal padding */
+    display: block;
+}
+
+.section {
+    page: rm_section;
+    width: 100%;
+    padding: 20mm;
+    box-sizing: border-box;
+    background: linear-gradient(to right, rgb(227, 225, 221), rgb(238, 236, 232));
+    display: block;
+    margin-bottom: 20mm;
+    break-before: always;
+    /* Start each section on a new page */
+    /* Allow content to flow naturally */
+
+}
+
+.section-title {
+    font-size: 1.7em;
+    margin-bottom: 10mm;
+    color: rgb(108, 108, 108);
+    text-align: left;
+}
+
+.section-text {
+    font-size: 1em;
+    line-height: 1.5;
+    color: rgb(85, 85, 85);
+    text-align: left;
+    margin-top: 5mm;
+    margin-bottom: 20mm;
+}
+
+.page-break {
+    break-before: always;
+    /* Ensure content starts on a new page */
+}
