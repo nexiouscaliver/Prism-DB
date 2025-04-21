@@ -183,3 +183,4 @@ logs/*
 # Ignore the venv directory
 prism.venv/
 .cursor/
+.cursorignore

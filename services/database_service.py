@@ -243,20 +243,25 @@ class DatabaseService:
         """Get schema information for a specific database.
         
         Args:
-            db_id: Database identifier.
+            db_id: Database identifier. If "default" and default DB has no tables, returns schemas from all databases.
             
         Returns:
             Schema information.
         """
+        logger.info(f"Fetching schema for database ID: {db_id}")
+        
         if db_id not in self.connections:
+            available_dbs = list(self.connections.keys())
+            logger.error(f"Database '{db_id}' not found. Available databases: {available_dbs}")
             return {
                 "status": "error",
                 "message": f"Database '{db_id}' not found or not initialized",
-                "available_databases": list(self.connections.keys())
+                "available_databases": available_dbs
             }
             
         try:
             connection = self.connections[db_id]
+            logger.info(f"Retrieving schema for database '{db_id}' ({connection['config'].name})")
             
             # Use SQLAlchemy to get schema information
             engine = create_engine(connection["config"].connection_string)
@@ -265,6 +270,7 @@ class DatabaseService:
             # Get list of tables
             tables = []
             table_names = inspector.get_table_names()
+            logger.info(f"Found {len(table_names)} tables in database '{db_id}'")
             
             for table_name in table_names:
                 columns = []
@@ -300,6 +306,30 @@ class DatabaseService:
                     "foreign_keys": foreign_keys
                 })
             
+            # If this is the default database and it has no tables, try to get schemas from all databases
+            if db_id == "default" and len(tables) == 0:
+                logger.info("Default database has no tables, fetching schemas from all available databases")
+                all_tables = []
+                for other_db_id, other_conn in self.connections.items():
+                    if other_db_id != "default":
+                        try:
+                            logger.info(f"Fetching schema from alternative database: {other_db_id}")
+                            other_schema = await self.get_schema(other_db_id)
+                            if other_schema["status"] == "success" and "data" in other_schema and "tables" in other_schema["data"]:
+                                # Prefix table names with database ID to avoid collisions
+                                for table in other_schema["data"]["tables"]:
+                                    # Add database origin information
+                                    table["db_id"] = other_db_id
+                                    table["db_name"] = other_conn["config"].name
+                                all_tables.extend(other_schema["data"]["tables"])
+                        except Exception as inner_e:
+                            logger.warning(f"Error fetching schema from {other_db_id}: {str(inner_e)}")
+                
+                if all_tables:
+                    logger.info(f"Successfully found {len(all_tables)} tables across all databases")
+                    tables = all_tables
+            
+            logger.info(f"Returning schema with {len(tables)} tables for database '{db_id}'")
             return {
                 "status": "success",
                 "message": f"Schema retrieved for database '{db_id}'",
@@ -313,6 +343,8 @@ class DatabaseService:
             
         except Exception as e:
             logger.error(f"Error getting schema for database '{db_id}': {str(e)}")
+            import traceback
+            logger.error(f"Schema retrieval traceback: {traceback.format_exc()}")
             return {
                 "status": "error",
                 "message": f"Error getting schema: {str(e)}",
