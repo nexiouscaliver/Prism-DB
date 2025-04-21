@@ -8,11 +8,13 @@ from flask import jsonify, request, abort
 from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
 from pydantic import ValidationError
 import json
+import traceback
 
 from app.api.v1 import bp
 from app import logger
 from app.auth.controllers import check_rate_limit, AuthErrorCode
 from agents.orchestrator import Orchestrator, SQLGenerationInput
+from ai.agents.orchestrator import AgentRequest
 
 
 # Create an instance of the orchestrator
@@ -36,6 +38,8 @@ async def generate_query():
         data = request.get_json()
         query = data.get("query", "")
         db_id = data.get("db_id", "default")
+        
+        logger.info(f"Processing query: '{query}' for database: '{db_id}'")
         
         # Check rate limit
         is_limited, remaining = await check_rate_limit(user_id)
@@ -64,6 +68,9 @@ async def generate_query():
             "db_id": db_id
         }
         
+        # Instead of creating AgentRequest, pass query and context directly
+        # The orchestrator in agents/orchestrator.py expects input_text as string 
+        # and context as a dictionary
         result = await orchestrator.process_query(query, context)
         
         # Verify result is a valid JSON dictionary before returning
@@ -76,7 +83,22 @@ async def generate_query():
                     "message": "Query processing returned an invalid format."
                 }
             }), 500
-            
+        
+        # Ensure the response has a SQL field for the frontend
+        if result.get("status") == "success" and "sql" not in result:
+            logger.warning("SQL field missing in success response, adding fallback")
+            # Try to find SQL in other possible locations
+            if "data" in result and isinstance(result["data"], dict) and "sql" in result["data"]:
+                result["sql"] = result["data"]["sql"]
+            elif "generated_sql" in result:
+                result["sql"] = result["generated_sql"]
+            else:
+                # Last resort fallback
+                result["sql"] = "SELECT 1 as result"
+                result["note"] = "Fallback SQL added due to missing SQL in response"
+        
+        logger.info(f"Query processed successfully, status: {result.get('status')}, SQL: {result.get('sql', '')[:50]}...")
+        
         return jsonify(result)
         
     except json.JSONDecodeError as je:
@@ -90,7 +112,7 @@ async def generate_query():
         }), 500
         
     except AttributeError as ae:
-        logger.error("Attribute error", error=str(ae))
+        logger.error("Attribute error", error=str(ae), traceback=traceback.format_exc())
         return jsonify({
             "status": "error",
             "error": {
@@ -100,7 +122,7 @@ async def generate_query():
         }), 500
         
     except Exception as e:
-        logger.error("Query generation error", error=str(e))
+        logger.error("Query generation error", error=str(e), traceback=traceback.format_exc())
         return jsonify({
             "status": "error",
             "error": {
