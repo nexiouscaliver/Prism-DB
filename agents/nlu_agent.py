@@ -8,6 +8,7 @@ from typing import Dict, Any, List, Optional, Union
 import json
 import datetime
 import uuid
+import asyncio
 
 from agno.models.google import Gemini
 from pydantic import BaseModel, Field, validator
@@ -202,6 +203,36 @@ class NLUAgent(PrismAgent):
             # Format context as JSON string if provided
             context_str = json.dumps(context) if context else "{}"
             
+            # Get database schema information if available
+            schema_info = ""
+            db_id = context.get("db_id", "default") if context else "default"
+            
+            # Try to get schema information from the database service
+            try:
+                from services.database_service import database_service
+                schema_result = asyncio.run(database_service.get_schema(db_id))
+                
+                if schema_result.get("status") == "success" and "data" in schema_result:
+                    tables = schema_result["data"].get("tables", [])
+                    
+                    # Format schema information for the prompt
+                    if tables:
+                        schema_info = "\n\nDatabase Schema Information:\n"
+                        for table in tables:
+                            table_name = table.get("name", "")
+                            schema_info += f"- Table: {table_name}\n"
+                            
+                            columns = table.get("columns", [])
+                            if columns:
+                                schema_info += "  Columns:\n"
+                                for col in columns:
+                                    col_name = col.get("name", "")
+                                    col_type = col.get("type", "")
+                                    schema_info += f"    - {col_name} ({col_type})\n"
+            except Exception as e:
+                print(f"Error getting schema: {str(e)}")
+                # Continue without schema information
+            
             # Build system prompt with schema information if available
             system_prompt = (
                 "You are an NLU (Natural Language Understanding) parser that extracts structured information from user queries. "
@@ -222,6 +253,12 @@ class NLUAgent(PrismAgent):
                 "Valid intents: data_retrieval, report_generation, trend_analysis, comparison, aggregation, prediction, anomaly_detection, unknown\n"
                 "Entity types can include: metric, filter, date, dimension, table, column, value, aggregation, function\n\n"
                 "Be precise and literal in your intent classification. If you're unsure, use 'unknown' with a lower confidence score."
+                f"{schema_info}\n\n"
+                "If you have schema information, use actual table and column names in the suggested_sql field instead of placeholders like <table> or <columns>.\n"
+                "If schema information is NOT available, you MUST STILL provide a suggested_sql template with placeholders.\n"
+                "For ambiguous queries (e.g. 'show me top 5 rows'), try to resolve ambiguities by using the most appropriate table from the schema when available.\n"
+                "IMPORTANT: For ANY query, ALWAYS provide a suggested_sql, even if it uses placeholders. Never return null for suggested_sql.\n"
+                "For 'show me top 5 rows' without schema info, use: SELECT <columns> FROM <table> LIMIT 5"
             )
             
             # Build user prompt with query and context

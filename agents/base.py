@@ -6,6 +6,7 @@ This module defines the base agent class that all specialized agents
 """
 from typing import List, Dict, Any, Optional, Union
 import json
+import asyncio
 
 from agno.agent import Agent
 from agno.models.openai import OpenAIChat
@@ -174,7 +175,7 @@ class PrismAgent(Agent):
         """
         return self.format_response("success", message, data=data)
         
-    def process(self, input_text: str, context: Dict[str, Any] = None) -> Dict[str, Any]:
+    async def process(self, input_text: str, context: Dict[str, Any] = None) -> Dict[str, Any]:
         """Process an input with the agent and return structured response.
         
         Args:
@@ -191,7 +192,7 @@ class PrismAgent(Agent):
                     self.add_memory(f"{key}: {json.dumps(value)}")
             
             # Get response from Agno agent with JSON output format
-            response = self.generate(
+            response = await self.generate(
                 input_text, 
                 generation_config={"response_mime_type": "application/json"}
             )
