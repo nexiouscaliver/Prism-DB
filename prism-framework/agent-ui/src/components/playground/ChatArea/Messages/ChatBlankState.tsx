@@ -14,23 +14,23 @@ const EXTERNAL_LINKS = {
 
 const TECH_ICONS = [
   {
-    type: 'nextjs' as IconType,
+    type: 'python' as IconType,
     position: 'left-0',
-    link: 'https://nextjs.org',
+    link: 'https://python.org',
     name: 'Next.js',
     zIndex: 10
   },
   {
-    type: 'shadcn' as IconType,
+    type: 'flask' as IconType,
     position: 'left-[15px]',
-    link: 'https://ui.shadcn.com',
+    link: 'https://flask.palletprojects.com',
     name: 'shadcn/ui',
     zIndex: 20
   },
   {
-    type: 'tailwind' as IconType,
+    type: 'agno' as IconType,
     position: 'left-[30px]',
-    link: 'https://tailwindcss.com',
+    link: 'https://console.groq.com',
     name: 'Tailwind CSS',
     zIndex: 30
   }
@@ -118,7 +118,7 @@ const ChatBlankState = () => {
         >
           <div className="flex items-center justify-center gap-x-2 whitespace-nowrap font-medium">
             <span className="flex items-center font-[600]">
-              This is an open-source
+              This is a Prism-DB
             </span>
             <span className="inline-flex translate-y-[10px] scale-125 items-center transition-transform duration-200 hover:rotate-6">
               <Link
@@ -180,7 +180,7 @@ const ChatBlankState = () => {
           transition={{ duration: 0.5, delay: 0.5 }}
           className="flex justify-center gap-4"
         >
-          <ActionButton
+          {/* <ActionButton
             href={EXTERNAL_LINKS.documentation}
             variant="primary"
             text="GO TO DOCS"
@@ -188,7 +188,7 @@ const ChatBlankState = () => {
           <ActionButton
             href={EXTERNAL_LINKS.playground}
             text="VISIT AGENT PLAYGROUND"
-          />
+          /> */}
         </motion.div>
       </div>
     </section>

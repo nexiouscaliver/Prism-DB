@@ -1,4 +1,5 @@
 'use client'
+
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { TextArea } from '@/components/ui/textarea'
@@ -50,7 +51,7 @@ const ChatInput = () => {
           }
         }}
         className="w-full border border-accent bg-primaryAccent px-4 text-sm text-primary focus:border-accent"
-        disabled={!selectedAgent}
+        // disabled={!selectedAgent}
         ref={chatInputRef}
       />
       <Button
