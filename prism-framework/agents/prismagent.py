@@ -19,6 +19,12 @@ from agno.tools import Toolkit
 import os
 import dotenv
 
+from agents.query_builder_agent import get_query_builder_agent
+from agents.admin_agent import get_admin_agent  
+from agents.read_agent import get_read_agent
+from agents.write_agent import get_write_agent
+from agents.schema_agent import get_schema_agent
+
 dotenv.load_dotenv(dotenv_path=".env.agent")
 
 db_url = os.getenv("AGENT_DB_URL")

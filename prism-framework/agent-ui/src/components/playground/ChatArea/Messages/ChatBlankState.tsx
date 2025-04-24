@@ -118,7 +118,7 @@ const ChatBlankState = () => {
         >
           <div className="flex items-center justify-center gap-x-2 whitespace-nowrap font-medium">
             <span className="flex items-center font-[600]">
-              This is an open-source
+              This is The Prism Framework
             </span>
             <span className="inline-flex translate-y-[10px] scale-125 items-center transition-transform duration-200 hover:rotate-6">
               <Link
@@ -183,11 +183,11 @@ const ChatBlankState = () => {
           <ActionButton
             href={EXTERNAL_LINKS.documentation}
             variant="primary"
-            text="GO TO DOCS"
+            text="GO TO PRISM DOCS"
           />
           <ActionButton
             href={EXTERNAL_LINKS.playground}
-            text="VISIT AGENT PLAYGROUND"
+            text="VISIT PRISM FRAMEWORK"
           />
         </motion.div>
       </div>
