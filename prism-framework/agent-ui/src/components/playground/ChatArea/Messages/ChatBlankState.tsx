@@ -183,7 +183,7 @@ const ChatBlankState = () => {
           {/* <ActionButton
             href={EXTERNAL_LINKS.documentation}
             variant="primary"
-            text="GO TO DOCS"
+            text="GO TO PRISM DOCS"
           />
           <ActionButton
             href={EXTERNAL_LINKS.playground}
