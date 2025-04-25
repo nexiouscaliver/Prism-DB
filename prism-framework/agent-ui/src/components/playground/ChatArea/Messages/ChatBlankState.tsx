@@ -28,7 +28,7 @@ const TECH_ICONS = [
     zIndex: 20
   },
   {
-    type: 'agno' as IconType,
+    type: 'next' as IconType,
     position: 'left-[30px]',
     link: 'https://console.groq.com',
     name: 'Tailwind CSS',

@@ -31,10 +31,10 @@ export type IconType =
   | 'download'
   | 'hammer'
   | 'check'
-  | 'chevron-down'
-  | 'chevron-up'
+  | 'chevron-down'  | 'chevron-up'
   | 'plus-icon'
   | 'references'
+  | 'python'
   | 'trash'
 
 export interface IconProps {
