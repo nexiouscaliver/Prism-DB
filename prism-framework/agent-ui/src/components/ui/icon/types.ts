@@ -36,6 +36,7 @@ export type IconType =
   | 'references'
   | 'python'
   | 'trash'
+  | 'flask'
 
 export interface IconProps {
   type: IconType
