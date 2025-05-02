@@ -182,5 +182,7 @@ logs/*
 
 # Ignore the venv directory
 prism.venv/
+Prism-DB/.venvprism/
 .cursor/
 .cursorignore
+.venvprism/*

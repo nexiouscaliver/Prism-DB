@@ -18,10 +18,12 @@ import {
   NextjsTag,
   ShadcnTag,
   TailwindTag,
-  AgnoTag,
+  AgnoTag,  
   ReasoningIcon,
-  ReferencesIcon
+  ReferencesIcon,
+  PythonLogo
 } from './custom-icons'
+  
 import { IconTypeMap } from './types'
 import {
   RefreshCw,
@@ -42,8 +44,8 @@ import { PlusIcon } from '@radix-ui/react-icons'
 
 export const ICONS: IconTypeMap = {
   'open-ai': OpenAILogo,
-  mistral: MistralLogo,
   gemini: GeminiLogo,
+  mistral: MistralLogo,
   aws: AwsLogo,
   azure: AzureLogo,
   anthropic: AnthropicLogo,
@@ -72,8 +74,8 @@ export const ICONS: IconTypeMap = {
   hammer: HammerIcon,
   check: Check,
   'chevron-down': ChevronDown,
-  'chevron-up': ChevronUp,
-  'plus-icon': PlusIcon,
+  'chevron-up': ChevronUp,  'plus-icon': PlusIcon,
   references: ReferencesIcon,
-  trash: Trash
-}
+  trash: Trash,
+  python: PythonLogo
+}  

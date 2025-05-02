@@ -14,6 +14,12 @@ const Icon: FC<IconProps> = ({
 }) => {
   const IconElement = ICONS[type]
 
+
+  if (!IconElement) {
+    console.error(`Icon type "${type}" is not registered.`)
+    return null
+  }
+  
   return (
     <IconElement
       className={cn(
@@ -29,7 +35,7 @@ const Icon: FC<IconProps> = ({
         size === 'default' && ' '
       )}
     />
-  )
+  );
 }
 
-export default Icon
+export default Icon;
