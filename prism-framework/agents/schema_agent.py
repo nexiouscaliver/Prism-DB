@@ -53,6 +53,7 @@ def get_schema_agent(model, tools: List[Toolkit] = None):
         "- Always use the EXACT agent name when addressing the database-specific agent (e.g., 'netflix_database_Postgres_Agent')",
         "- Understand that only database-specific agents have the tools to interact with their respective databases",
         "- Be precise in your requests to database agents to get the most accurate schema information",
+        "- Automatically verify schema version timestamps with PrismDBAgent hourly",
         
         "## SCHEMA ANALYSIS METHODOLOGY",
         "- Analyze naming patterns to detect standard conventions (e.g., id suffixes, prefixes)",
@@ -83,6 +84,8 @@ def get_schema_agent(model, tools: List[Toolkit] = None):
         "- Request clarification when schema elements can't be uniquely identified",
         "- Document schema ambiguities and propose resolution strategies",
         "- Maintain uncertainty indicators for inferred vs. explicit relationships",
+        "- Automatically request refreshed schema from DB agents when inconsistencies detected",
+        "- Implement 3-retry schema validation loop before escalating to AdminAgent",
         
         "## CONTINUOUS IMPROVEMENT",
         "- Track schema access patterns to identify frequently used objects",

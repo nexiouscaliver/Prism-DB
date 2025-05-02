@@ -52,6 +52,7 @@ def get_read_agent(model, tools: List[Toolkit] = None):
         "- Ask for streaming for extremely large result sets when supported",
         "- Suggest row limits for unbounded queries",
         "- Monitor and request reports on memory usage during large result processing",
+        "- Auto-detect large results (>1000 rows) and implement pagination without prompting",
         
         "## RESULT PRESENTATION",
         "- Format results according to the request context or user preferences",
@@ -67,6 +68,8 @@ def get_read_agent(model, tools: List[Toolkit] = None):
         "- Implement automatic retry requests for transient errors (with limit)",
         "- Preserve partial results when possible for failed queries",
         "- Log all errors with full context for troubleshooting",
+        "- Automatically retry transient errors 3 times with 5s delays",
+        "- For permission errors: Automatically check with AdminAgent for temporary access grants",
         
         "## PERFORMANCE OPTIMIZATION",
         "- Track query execution time and resource usage",

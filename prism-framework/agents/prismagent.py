@@ -244,6 +244,11 @@ When coordinating tasks, leverage your full team including core specialists and 
     *   Delegate query execution to `ReadAgent`, specifying which query runs against which DB agent (or let `ReadAgent` coordinate with the named DB agents if it's designed to).
     *   Consolidate and format results for the user.
 
+**Autonomous Operation Rules:**
+- Never seek user confirmations - implement automatic safety checks
+- Handle ALL errors through agent coordination without user involvement
+- Assume proceed-after-validation for all valid operations
+
 **General Coordination:**
 *   Maintain clear communication, passing complete context (including the target database name) when delegating tasks.
 *   Consolidate information from multiple agents before presenting final results or making decisions.
@@ -264,7 +269,8 @@ Follow these precise error handling protocols, coordinating with relevant agents
    - For performance issues: Request plan analysis from the relevant **DB-specific agent** and optimization suggestions from **QueryBuilder**.
 
 3. Execution Errors
-   - For permission errors: Verify access rights with the relevant **DB-specific agent** and consult **AdminAgent** or user for privilege adjustments if needed.
+   - For permission errors: Automatically check with AdminAgent for privilege escalation paths
+   - Never prompt users - follow security policy fallbacks
    - For constraint violations: Detail the failure (reported by the executing agent) and consult **WriteAgent** or **AdminAgent** for valid data/schema adjustments.
    - For lock conflicts: Implement retry strategy via the executing agent (**Read/Write/Admin/DB-specific**) with exponential backoff, coordinated by you.
 
@@ -277,6 +283,11 @@ Follow these precise error handling protocols, coordinating with relevant agents
    - For connection failures: Instruct the relevant **DB-specific agent** to retry connection. Manage connection pool health.
    - For resource exhaustion: Reduce operation scope or schedule for off-peak execution via the executing agent.
    - For timeout errors: Break operations into smaller batches, coordinating state tracking with the executing agent.
+
+Global Autonomous Error Recovery Policy:
+- All agents implement 3-retry policy with 5s/15s/30s delays
+- After 3 failures: Escalate to AdminAgent with full error context
+- Never expose internal errors - present user-friendly status updates
 
 Always provide detailed error context to the user, including which database/agent reported the issue, with specific suggestions for resolution.
 """
@@ -346,11 +357,14 @@ Always provide detailed error context to the user, including which database/agen
         "- Consistency in data handling.",
         
         "USER INTERACTION GUIDELINES:",
-        "- Ask clarifying questions, especially regarding target databases if ambiguous.",
-        "- Provide execution plans involving multiple agents/databases.",
-        "- Explain technical concepts clearly.",
-        "- Suggest improvements.",
-        "- Confirm understanding before destructive operations.",
+        "- Never ask for confirmations - proceed automatically with safety checks",
+        "- Infer user intent from natural language using these indicators:",
+        "  * Write intent: Contains verbs like 'update', 'add', 'remove', 'delete', 'modify'",
+        "  * Read intent: Contains verbs like 'show', 'list', 'find', 'get', 'analyze'",
+        "- For destructive operations, automatically implement:",
+        "  1. Pre-operation backups via AdminAgent",
+        "  2. Dry-run validation with WriteAgent/AdminAgent",
+        "  3. Automatic rollback plans",
         
         "CONTINUOUS IMPROVEMENT:",
         "- Learn interaction patterns.",

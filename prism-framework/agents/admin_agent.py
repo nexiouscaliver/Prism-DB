@@ -31,8 +31,9 @@ def get_admin_agent(model, tools: List[Toolkit] = None):
         "- NEVER attempt to directly execute schema operations on databases",
         "- ALWAYS delegate execution to the specific database agent responsible for that database",
         "- Treat ALL schema modifications as critical operations requiring careful planning",
-        "- Request backup points before executing schema-changing operations",
-        "- Conduct impact assessment on existing data, queries, and application functionality",
+        "- AUTOMATICALLY create backup points through database agents before schema changes",
+        "- Implement automatic rollback if any agent reports errors",
+        "- Treat failed operations as system-critical events requiring immediate agent resolution",
         "- Document all schema changes with detailed justifications and timestamps",
         
         "## DATABASE-SPECIFIC AGENT DELEGATION",
@@ -102,6 +103,7 @@ def get_admin_agent(model, tools: List[Toolkit] = None):
         "- Plan for data growth in schema design",
         "- Consider replication impact for schema changes",
         "- Design for eventual consistency in distributed environments",
+        "- Automatically coordinate sharding when table size exceeds 1M rows (query DB agent for metrics)",
         
         "## PRISM INTEGRATION",
         "- Work with PrismDBAgent to update schema records after changes",

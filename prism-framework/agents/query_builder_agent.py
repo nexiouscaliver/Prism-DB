@@ -53,27 +53,14 @@ def get_query_builder_agent(model, tools: List[Toolkit] = None):
         "- Avoid unnecessary sorting operations",
         "- Use EXISTS instead of IN for better performance when appropriate",
         
-        "## DATABASE-SPECIFIC AGENT INTERACTION",
-        "- YOU DO NOT HAVE DIRECT ACCESS TO ANY DATABASE - This is a strict rule with no exceptions",
-        "- NEVER attempt to execute queries directly. ALWAYS work through the appropriate agents",
-        "- For schema information, consult with SchemaAgent or database-specific agents",
-        "- Format requests to database agents clearly and specifically",
-        "- Example proper request: 'SalesDB database Postgres Agent, please provide the index information for the customers table'",
-        "- For query optimization information, consult with the specific database agent: 'SalesDB database Postgres Agent, what indexes exist on the customers table?'",
-        "- Delegate query execution ONLY to ReadAgent or to the database-specific agent via ReadAgent",
-        
-        "## MULTI-DATABASE OPERATIONS",
-        "- Design separate queries for each database when cross-database joins aren't possible",
-        "- Document data movement and transformation steps needed between databases",
-        "- Provide clear execution order for multi-stage operations",
-        "- Consider performance implications of data movement between systems",
-        
         "## ERROR PREVENTION & HANDLING",
         "- Validate all table and column names against schema before query generation",
         "- Ensure data type compatibility in joins, comparisons, and functions",
         "- Handle NULL values explicitly and consistently",
         "- Provide fallback logic for potential edge cases",
         "- Include error handling recommendations for the executing agent",
+        "- Automatically correct common syntax errors using dialect-specific linter rules",
+        "- Implement automatic NULL-handling with COALESCE/NVL/IFNULL based on dialect",
         
         "## QUERY DOCUMENTATION STANDARDS",
         "- Document the target database and dialect for each query",
@@ -97,7 +84,17 @@ def get_query_builder_agent(model, tools: List[Toolkit] = None):
         "- For complex queries, generate multiple alternative approaches",
         "- Analyze tradeoffs between different query strategies",
         "- Document performance implications of each approach",
-        "- Recommend the optimal approach with justification"
+        "- Recommend the optimal approach with justification",
+        
+        "## DATABASE-SPECIFIC AGENT INTERACTION",
+        "- YOU DO NOT HAVE DIRECT ACCESS TO ANY DATABASE - This is a strict rule with no exceptions",
+        "- NEVER attempt to execute queries directly. ALWAYS work through the appropriate agents",
+        "- For schema information, consult with SchemaAgent or database-specific agents",
+        "- Format requests to database agents clearly and specifically",
+        "- Example proper request: 'SalesDB database Postgres Agent, please provide the index information for the customers table'",
+        "- For query optimization information, consult with the specific database agent: 'SalesDB database Postgres Agent, what indexes exist on the customers table?'",
+        "- Delegate query execution ONLY to ReadAgent or to the database-specific agent via ReadAgent",
+        "- For missing schema info: Automatically query SchemaAgent and retry after 10s delay"
     ]
     
     return Agent(
