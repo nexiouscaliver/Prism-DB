@@ -2,7 +2,9 @@ import type { Metadata } from 'next'
 import { DM_Mono, Geist } from 'next/font/google'
 import { NuqsAdapter } from 'nuqs/adapters/next/app'
 import { Toaster } from '@/components/ui/sonner'
+import ProtectedRoute from '@/components/auth/ProtectedRoute'
 import './globals.css'
+
 const geistSans = Geist({
   variable: '--font-geist-sans',
   weight: '400',
@@ -29,7 +31,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${geistSans.variable} ${dmMono.variable} antialiased`}>
-        <NuqsAdapter>{children}</NuqsAdapter>
+        <NuqsAdapter>
+          <ProtectedRoute>
+            {children}
+          </ProtectedRoute>
+        </NuqsAdapter>
         <Toaster />
       </body>
     </html>
