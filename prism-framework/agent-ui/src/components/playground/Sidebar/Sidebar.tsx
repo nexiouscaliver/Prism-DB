@@ -226,9 +226,9 @@ const Sidebar = () => {
   }
   return (
     <motion.aside
-      className="relative flex h-screen shrink-0 grow-0 flex-col overflow-hidden px-2 py-3 font-dmmono"
-      initial={{ width: '16rem' }}
-      animate={{ width: isCollapsed ? '2.5rem' : '16rem' }}
+      className="relative flex h-screen shrink-0 grow-0 flex-col overflow-hidden px-3 py-3 font-dmmono"
+      initial={{ width: '17rem' }}
+      animate={{ width: isCollapsed ? '2.5rem' : '17rem' }}
       transition={{ type: 'spring', stiffness: 300, damping: 30 }}
     >
       <motion.div
@@ -241,49 +241,51 @@ const Sidebar = () => {
         }}
       >
         {/* Main content */}
-        <div className="flex-1 space-y-5 overflow-y-auto">
-          <SidebarHeader />
-          <NewChatButton
-            disabled={messages.length === 0}
-            onClick={handleNewChat}
-          />
-          {isMounted && (
-            <>
-              <Endpoint />
-              {isEndpointActive && (
-                <>
-                  <motion.div
-                    className="flex w-full flex-col items-start gap-2"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ duration: 0.5, ease: 'easeInOut' }}
-                  >
-                    <div className="text-xs font-medium uppercase text-primary">
-                      Agent
-                    </div>
-                    {isEndpointLoading ? (
-                      <div className="flex w-full flex-col gap-2">
-                        {Array.from({ length: 2 }).map((_, index) => (
-                          <Skeleton
-                            key={index}
-                            className="h-9 w-full rounded-xl"
-                          />
-                        ))}
+        <div className="relative flex-1">
+          <div className="absolute inset-0 space-y-5 overflow-y-auto pr-3 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-accent hover:scrollbar-thumb-accent/80">
+            <SidebarHeader />
+            <NewChatButton
+              disabled={messages.length === 0}
+              onClick={handleNewChat}
+            />
+            {isMounted && (
+              <>
+                <Endpoint />
+                {isEndpointActive && (
+                  <>
+                    <motion.div
+                      className="flex w-full flex-col items-start gap-2"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ duration: 0.5, ease: 'easeInOut' }}
+                    >
+                      <div className="text-xs font-medium uppercase text-primary">
+                        Agent
                       </div>
-                    ) : (
-                      <>
-                        <AgentSelector />
-                        {selectedModel && agentId && (
-                          <ModelDisplay model={selectedModel} />
-                        )}
-                      </>
-                    )}
-                  </motion.div>
-                  <Sessions />
-                </>
-              )}
-            </>
-          )}
+                      {isEndpointLoading ? (
+                        <div className="flex w-full flex-col gap-2">
+                          {Array.from({ length: 2 }).map((_, index) => (
+                            <Skeleton
+                              key={index}
+                              className="h-9 w-full rounded-xl"
+                            />
+                          ))}
+                        </div>
+                      ) : (
+                        <>
+                          <AgentSelector />
+                          {selectedModel && agentId && (
+                            <ModelDisplay model={selectedModel} />
+                          )}
+                        </>
+                      )}
+                    </motion.div>
+                    <Sessions />
+                  </>
+                )}
+              </>
+            )}
+          </div>
         </div>
 
         {/* Collapse button */}
