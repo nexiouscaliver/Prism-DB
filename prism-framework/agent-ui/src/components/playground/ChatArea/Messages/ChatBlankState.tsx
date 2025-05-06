@@ -1,11 +1,11 @@
 'use client'
 
+import { useAuthStore } from '@/store/auth-store'
+import Icon from '@/components/ui/icon'
 import Link from 'next/link'
 import { motion, Variants } from 'framer-motion'
-import Icon from '@/components/ui/icon'
 import { IconType } from '@/components/ui/icon/types'
 import React, { useState } from 'react'
-import { IconContext } from 'react-icons'
 
 interface TechIcon {
   type: IconType;
@@ -16,12 +16,6 @@ interface TechIcon {
   className?: string;
 }
 
-const EXTERNAL_LINKS = {
-  documentation: 'https://agno.link/agent-ui',
-  playground: 'https://app.agno.com/playground/agents',
-  prism: 'https://github.com/nexiouscaliver/Prism-DB'
-}
-
 const TECH_ICONS: TechIcon[] = [
   {
     type: 'python' as IconType,
@@ -29,7 +23,6 @@ const TECH_ICONS: TechIcon[] = [
     link: 'https://python.org',
     name: 'Python',
     zIndex: 10,
-    // className: 'text-primary fill-current'
   },
   {
     type: 'tailwind' as IconType,
@@ -47,32 +40,9 @@ const TECH_ICONS: TechIcon[] = [
   }
 ]
 
-interface ActionButtonProps {
-  href: string
-  variant?: 'primary'
-  text: string
-}
-
-const ActionButton = ({ href, variant, text }: ActionButtonProps) => {
-  const baseStyles =
-    'px-4 py-2 text-sm transition-colors font-dmmono tracking-tight'
-  const variantStyles = {
-    primary: 'border border-border hover:bg-neutral-800 rounded-xl'
-  }
-
-  return (
-    <Link
-      href={href}
-      target="_blank"
-      className={`${baseStyles} ${variant ? variantStyles[variant] : ''}`}
-    >
-      {text}
-    </Link>
-  )
-}
-
 const ChatBlankState = () => {
   const [hoveredIcon, setHoveredIcon] = useState<string | null>(null)
+  const { user } = useAuthStore()
 
   // Animation variants for the icon
   const iconVariants: Variants = {
@@ -120,6 +90,16 @@ const ChatBlankState = () => {
       className="flex flex-col items-center text-center font-geist"
       aria-label="Welcome message"
     >
+      {user && (
+        <motion.h2
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="mb-8 text-2xl font-medium text-primary"
+        >
+          Welcome, {user.username}!
+        </motion.h2>
+      )}
       <div className="flex max-w-3xl flex-col gap-y-8">
         <motion.h1
           initial={{ opacity: 0, y: 10 }}
@@ -131,15 +111,6 @@ const ChatBlankState = () => {
             <span className="flex items-center font-[600]">
               This is PrismDB
             </span>
-            {/* <Link
-              href={EXTERNAL_LINKS.prism}
-              target="_blank"
-              rel="noopener"
-              className="flex items-center px-1 py-1 rounded-md bg-gray-200 hover:bg-gray-300 transition-colors text-black"
-            >
-              <span className="text-xs mr-1">PrismDB</span>
-              <Icon type="prism-tag" size="xs" />
-            </Link> */}
             <span className="flex items-center font-[600]">
               Agent UI, built with
             </span>
@@ -188,22 +159,6 @@ const ChatBlankState = () => {
           </div>
           <p>Explore the power of PrismDB - your database made smarter.</p>
         </motion.h1>
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.5 }}
-          className="flex justify-center gap-4"
-        >
-          {/* <ActionButton
-            href={EXTERNAL_LINKS.documentation}
-            variant="primary"
-            text="GO TO PRISM DOCS"
-          />
-          <ActionButton
-            href={EXTERNAL_LINKS.playground}
-            text="VISIT AGENT PLAYGROUND"
-          /> */}
-        </motion.div>
       </div>
     </section>
   )

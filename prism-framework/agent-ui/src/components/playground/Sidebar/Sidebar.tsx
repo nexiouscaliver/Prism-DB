@@ -13,11 +13,16 @@ import { toast } from 'sonner'
 import { useQueryState } from 'nuqs'
 import { truncateText } from '@/lib/utils'
 import { Skeleton } from '@/components/ui/skeleton'
+import UserDropdown from '@/components/auth/UserDropdown'
+
 const ENDPOINT_PLACEHOLDER = 'NO ENDPOINT ADDED'
 const SidebarHeader = () => (
-  <div className="flex items-center gap-2">
-    <Icon type="agno" size="xs" />
-    <span className="text-xs font-medium uppercase text-white">PrismDB Agent UI</span>
+  <div className="flex items-center justify-between w-full">
+    <div className="flex items-center gap-2">
+      <Icon type="agno" size="xs" />
+      <span className="text-xs font-medium uppercase text-white">PrismDB Agent UI</span>
+    </div>
+    <UserDropdown />
   </div>
 )
 
@@ -226,21 +231,8 @@ const Sidebar = () => {
       animate={{ width: isCollapsed ? '2.5rem' : '16rem' }}
       transition={{ type: 'spring', stiffness: 300, damping: 30 }}
     >
-      <motion.button
-        onClick={() => setIsCollapsed(!isCollapsed)}
-        className="absolute right-2 top-2 z-10 p-1"
-        aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-        type="button"
-        whileTap={{ scale: 0.95 }}
-      >
-        <Icon
-          type="sheet"
-          size="xs"
-          className={`transform ${isCollapsed ? 'rotate-180' : 'rotate-0'}`}
-        />
-      </motion.button>
       <motion.div
-        className="w-60 space-y-5"
+        className="flex h-full flex-col"
         initial={{ opacity: 0, x: -20 }}
         animate={{ opacity: isCollapsed ? 0 : 1, x: isCollapsed ? -20 : 0 }}
         transition={{ duration: 0.3, ease: 'easeInOut' }}
@@ -248,49 +240,87 @@ const Sidebar = () => {
           pointerEvents: isCollapsed ? 'none' : 'auto'
         }}
       >
-        <SidebarHeader />
-        <NewChatButton
-          disabled={messages.length === 0}
-          onClick={handleNewChat}
-        />
-        {isMounted && (
-          <>
-            <Endpoint />
-            {isEndpointActive && (
-              <>
-                <motion.div
-                  className="flex w-full flex-col items-start gap-2"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ duration: 0.5, ease: 'easeInOut' }}
-                >
-                  <div className="text-xs font-medium uppercase text-primary">
-                    Agent
-                  </div>
-                  {isEndpointLoading ? (
-                    <div className="flex w-full flex-col gap-2">
-                      {Array.from({ length: 2 }).map((_, index) => (
-                        <Skeleton
-                          key={index}
-                          className="h-9 w-full rounded-xl"
-                        />
-                      ))}
+        {/* Main content */}
+        <div className="flex-1 space-y-5 overflow-y-auto">
+          <SidebarHeader />
+          <NewChatButton
+            disabled={messages.length === 0}
+            onClick={handleNewChat}
+          />
+          {isMounted && (
+            <>
+              <Endpoint />
+              {isEndpointActive && (
+                <>
+                  <motion.div
+                    className="flex w-full flex-col items-start gap-2"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.5, ease: 'easeInOut' }}
+                  >
+                    <div className="text-xs font-medium uppercase text-primary">
+                      Agent
                     </div>
-                  ) : (
-                    <>
-                      <AgentSelector />
-                      {selectedModel && agentId && (
-                        <ModelDisplay model={selectedModel} />
-                      )}
-                    </>
-                  )}
-                </motion.div>
-                <Sessions />
-              </>
-            )}
-          </>
-        )}
+                    {isEndpointLoading ? (
+                      <div className="flex w-full flex-col gap-2">
+                        {Array.from({ length: 2 }).map((_, index) => (
+                          <Skeleton
+                            key={index}
+                            className="h-9 w-full rounded-xl"
+                          />
+                        ))}
+                      </div>
+                    ) : (
+                      <>
+                        <AgentSelector />
+                        {selectedModel && agentId && (
+                          <ModelDisplay model={selectedModel} />
+                        )}
+                      </>
+                    )}
+                  </motion.div>
+                  <Sessions />
+                </>
+              )}
+            </>
+          )}
+        </div>
+
+        {/* Collapse button */}
+        <motion.button
+          onClick={() => setIsCollapsed(!isCollapsed)}
+          className="mt-4 flex w-full items-center justify-center rounded-lg p-2 hover:bg-accent"
+          aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          type="button"
+          whileTap={{ scale: 0.95 }}
+        >
+          <Icon
+            type="sheet"
+            size="xs"
+            className={`transform ${isCollapsed ? 'rotate-180' : 'rotate-0'}`}
+          />
+        </motion.button>
       </motion.div>
+
+      {/* Collapsed state button */}
+      {isCollapsed && (
+        <motion.button
+          onClick={() => setIsCollapsed(false)}
+          className="absolute bottom-3 left-1/2 -translate-x-1/2 rounded-lg p-2 hover:bg-accent"
+          aria-label="Expand sidebar"
+          type="button"
+          whileTap={{ scale: 0.95 }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.2 }}
+        >
+          <Icon
+            type="sheet"
+            size="xs"
+            className="transform rotate-180"
+          />
+        </motion.button>
+      )}
     </motion.aside>
   )
 }
