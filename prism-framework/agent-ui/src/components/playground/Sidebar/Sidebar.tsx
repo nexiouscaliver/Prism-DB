@@ -17,7 +17,7 @@ const ENDPOINT_PLACEHOLDER = 'NO ENDPOINT ADDED'
 const SidebarHeader = () => (
   <div className="flex items-center gap-2">
     <Icon type="agno" size="xs" />
-    <span className="text-xs font-medium uppercase text-white">Prism-DB</span>
+    <span className="text-xs font-medium uppercase text-white">PrismDB Agent UI</span>
   </div>
 )
 

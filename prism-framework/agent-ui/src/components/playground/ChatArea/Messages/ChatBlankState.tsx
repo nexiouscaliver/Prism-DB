@@ -5,33 +5,44 @@ import { motion, Variants } from 'framer-motion'
 import Icon from '@/components/ui/icon'
 import { IconType } from '@/components/ui/icon/types'
 import React, { useState } from 'react'
+import { IconContext } from 'react-icons'
+
+interface TechIcon {
+  type: IconType;
+  position: string;
+  link: string;
+  name: string;
+  zIndex: number;
+  className?: string;
+}
 
 const EXTERNAL_LINKS = {
   documentation: 'https://agno.link/agent-ui',
   playground: 'https://app.agno.com/playground/agents',
-  agno: 'https://agno.com'
+  prism: 'https://github.com/nexiouscaliver/Prism-DB'
 }
 
-const TECH_ICONS = [
+const TECH_ICONS: TechIcon[] = [
   {
     type: 'python' as IconType,
-    position: 'left-0',
+    position: 'left-[1px]',
     link: 'https://python.org',
-    name: 'Next.js',
-    zIndex: 10
+    name: 'Python',
+    zIndex: 10,
+    // className: 'text-primary fill-current'
   },
   {
-    type: 'flask' as IconType,
+    type: 'tailwind' as IconType,
     position: 'left-[15px]',
-    link: 'https://flask.palletprojects.com',
-    name: 'shadcn/ui',
+    link: 'https://tailwindcss.com',
+    name: 'Tailwind CSS',
     zIndex: 20
   },
   {
-    type: 'next' as IconType,
+    type: 'nextjs' as IconType,
     position: 'left-[30px]',
-    link: 'https://console.groq.com',
-    name: 'Tailwind CSS',
+    link: 'https://nextjs.org',
+    name: 'Next.js',
     zIndex: 30
   }
 ]
@@ -118,18 +129,17 @@ const ChatBlankState = () => {
         >
           <div className="flex items-center justify-center gap-x-2 whitespace-nowrap font-medium">
             <span className="flex items-center font-[600]">
-              This is a Prism-DB
+              This is PrismDB
             </span>
-            <span className="inline-flex translate-y-[10px] scale-125 items-center transition-transform duration-200 hover:rotate-6">
-              <Link
-                href={EXTERNAL_LINKS.agno}
-                target="_blank"
-                rel="noopener"
-                className="cursor-pointer"
-              >
-                <Icon type="agno-tag" size="default" />
-              </Link>
-            </span>
+            {/* <Link
+              href={EXTERNAL_LINKS.prism}
+              target="_blank"
+              rel="noopener"
+              className="flex items-center px-1 py-1 rounded-md bg-gray-200 hover:bg-gray-300 transition-colors text-black"
+            >
+              <span className="text-xs mr-1">PrismDB</span>
+              <Icon type="prism-tag" size="xs" />
+            </Link> */}
             <span className="flex items-center font-[600]">
               Agent UI, built with
             </span>
@@ -154,7 +164,11 @@ const ChatBlankState = () => {
                       className="relative block cursor-pointer"
                     >
                       <div>
-                        <Icon type={icon.type} size="default" />
+                        <Icon 
+                          type={icon.type} 
+                          size="default" 
+                          className={icon.className}
+                        />
                       </div>
                       <motion.div
                         className="pointer-events-none absolute bottom-full left-1/2 mb-1 -translate-x-1/2 transform whitespace-nowrap rounded bg-neutral-800 px-2 py-1 text-xs text-primary"
@@ -172,7 +186,7 @@ const ChatBlankState = () => {
               </div>
             </span>
           </div>
-          <p>For the full experience, visit the Agent Playground.</p>
+          <p>Explore the power of PrismDB - your database made smarter.</p>
         </motion.h1>
         <motion.div
           initial={{ opacity: 0, y: 10 }}

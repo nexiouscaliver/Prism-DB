@@ -1,8 +1,11 @@
-import { type ElementType } from 'react'
+import { type IconType as ReactIconType } from 'react-icons'
 
-export type IconType =
-  | 'mistral'
+export type IconSize = 'xxs' | 'xs' | 'sm' | 'md' | 'lg' | 'dot' | 'default'
+
+export type IconType = 
+  | 'open-ai'
   | 'gemini'
+  | 'mistral'
   | 'aws'
   | 'azure'
   | 'anthropic'
@@ -15,13 +18,12 @@ export type IconType =
   | 'agno'
   | 'user'
   | 'agent'
-  | 'open-ai'
   | 'sheet'
   | 'nextjs'
   | 'shadcn'
   | 'tailwind'
   | 'reasoning'
-  | 'agno-tag'
+  | 'prism-tag'
   | 'refresh'
   | 'edit'
   | 'save'
@@ -31,21 +33,19 @@ export type IconType =
   | 'download'
   | 'hammer'
   | 'check'
-  | 'chevron-down'  | 'chevron-up'
+  | 'chevron-down'
+  | 'chevron-up'
   | 'plus-icon'
   | 'references'
-  | 'python'
   | 'trash'
-  | 'flask'
+  | 'python'
 
 export interface IconProps {
   type: IconType
-  size?: 'xs' | 'sm' | 'md' | 'lg' | 'dot' | 'xxs' | 'default'
+  size?: IconSize
   className?: string
   color?: string
   disabled?: boolean
 }
 
-export type IconTypeMap = {
-  [key in IconType]: ElementType
-}
+export type IconComponent = ReactIconType

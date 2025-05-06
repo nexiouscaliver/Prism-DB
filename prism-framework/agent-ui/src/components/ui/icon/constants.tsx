@@ -18,13 +18,14 @@ import {
   NextjsTag,
   ShadcnTag,
   TailwindTag,
-  AgnoTag,  
+  AgnoTag,
+  PrismTag,
   ReasoningIcon,
   ReferencesIcon,
   PythonLogo
 } from './custom-icons'
   
-import { IconTypeMap } from './types'
+import { type IconType } from './types'
 import {
   RefreshCw,
   Edit,
@@ -42,7 +43,7 @@ import {
 
 import { PlusIcon } from '@radix-ui/react-icons'
 
-export const ICONS: IconTypeMap = {
+export const ICONS: Record<IconType, React.FC> = {
   'open-ai': OpenAILogo,
   gemini: GeminiLogo,
   mistral: MistralLogo,
@@ -64,6 +65,7 @@ export const ICONS: IconTypeMap = {
   tailwind: TailwindTag,
   reasoning: ReasoningIcon,
   'agno-tag': AgnoTag,
+  'prism-tag': PrismTag,
   refresh: RefreshCw,
   edit: Edit,
   save: Save,
