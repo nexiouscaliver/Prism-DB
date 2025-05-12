@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { toast } from 'sonner'
 import { useAuthStore } from '@/store/auth-store'
 import { Button } from '@/components/ui/button'
+import { ArrowLeft } from 'lucide-react'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -50,7 +51,15 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex h-screen bg-background">
+    <div className="flex h-screen bg-background relative">
+      <Link 
+        href="/" 
+        className="absolute top-6 left-6 flex items-center justify-center w-8 h-8 rounded-full bg-background border border-input shadow-sm hover:shadow-md transition-all duration-200 text-muted-foreground hover:text-foreground group"
+      >
+        <ArrowLeft size={16} className="transition-transform group-hover:-translate-x-0.5" />
+        <span className="sr-only">Back to home</span>
+      </Link>
+      
       <div className="m-auto w-full max-w-md p-8 space-y-8 bg-background rounded-lg border shadow-md">
         <div className="text-center">
           <h1 className="text-3xl font-bold text-foreground">PrismDB</h1>
@@ -115,7 +124,7 @@ export default function LoginPage() {
             </Link>
           </p>
           <p className="mt-2 text-xs text-muted-foreground">
-            Demo credentials: admin / admin123
+            
           </p>
         </div>
       </div>

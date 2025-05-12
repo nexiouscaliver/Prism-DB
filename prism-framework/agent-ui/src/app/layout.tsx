@@ -2,7 +2,6 @@ import type { Metadata } from 'next'
 import { DM_Mono, Geist } from 'next/font/google'
 import { NuqsAdapter } from 'nuqs/adapters/next/app'
 import { Toaster } from '@/components/ui/sonner'
-import ProtectedRoute from '@/components/auth/ProtectedRoute'
 import './globals.css'
 
 const geistSans = Geist({
@@ -18,9 +17,9 @@ const dmMono = DM_Mono({
 })
 
 export const metadata: Metadata = {
-  title: 'PrismDB Agent UI',
+  title: 'PrismDB - Database Natural Language Interface',
   description:
-    'A modern chat interface for AI agents built with Next.js, Tailwind CSS, and TypeScript. This template provides a ready-to-use UI for interacting with Agno agents.'
+    'PrismDB is a multi-agent framework that acts as a contextual prism for databases, transforming natural language queries into structured insights, visual reports, and actionable diagrams.'
 }
 
 export default function RootLayout({
@@ -32,9 +31,7 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${geistSans.variable} ${dmMono.variable} antialiased`}>
         <NuqsAdapter>
-          <ProtectedRoute>
-            {children}
-          </ProtectedRoute>
+          {children}
         </NuqsAdapter>
         <Toaster />
       </body>
