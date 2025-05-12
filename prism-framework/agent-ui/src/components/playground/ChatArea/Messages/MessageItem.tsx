@@ -79,6 +79,9 @@ const AgentMessage = ({ message }: MessageProps) => {
 }
 
 const UserMessage = memo(({ message }: MessageProps) => {
+  // Remove content within <context> tags from the displayed message
+  const displayContent = message.content ? message.content.replace(/<context>[\s\S]*?<\/context>/g, '') : '';
+  
   return (
     <div className="flex items-start pt-4 text-start max-md:break-words">
       <div className="flex flex-row gap-x-3">
@@ -86,7 +89,7 @@ const UserMessage = memo(({ message }: MessageProps) => {
           <Icon type="user" size="sm" />
         </p>
         <div className="text-md rounded-lg py-1 font-geist text-secondary">
-          {message.content}
+          {displayContent}
         </div>
       </div>
     </div>
