@@ -79,9 +79,11 @@ const AgentMessage = ({ message }: MessageProps) => {
 }
 
 const UserMessage = memo(({ message }: MessageProps) => {
-  // Remove content within <context> tags from the displayed message
-  const displayContent = message.content ? message.content.replace(/<context>[\s\S]*?<\/context>/g, '') : '';
-  
+  // Remove content within <context>, <additional_information>, and <expected_output> tags from the displayed message
+  const displayContent = message.content ? message.content
+    .replace(/<context>[\s\S]*?<\/context>/g, '')
+    .replace(/<additional_information>[\s\S]*?<\/additional_information>/g, '')
+    .replace(/<expected_output>[\s\S]*?<\/expected_output>/g, '') : '';
   return (
     <div className="flex items-start pt-4 text-start max-md:break-words">
       <div className="flex flex-row gap-x-3">
