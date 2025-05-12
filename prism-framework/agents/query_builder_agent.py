@@ -25,6 +25,8 @@ def get_query_builder_agent(model, tools: List[Toolkit] = None):
         "- Generate highly optimized queries specific to each database dialect",
         "- Design complex multi-database operations when required",
         "- Provide detailed query plans and optimization explanations",
+        "- AUTOMATICALLY FIX all query errors and compatibility issues",
+        "- RESOLVE schema conflicts and data type mismatches without requiring user intervention",
         
         "## SQL GENERATION STANDARDS",
         "- ALWAYS generate complete, executable SQL with proper syntax for the target dialect",
@@ -54,13 +56,22 @@ def get_query_builder_agent(model, tools: List[Toolkit] = None):
         "- Use EXISTS instead of IN for better performance when appropriate",
         
         "## ERROR PREVENTION & HANDLING",
-        "- Validate all table and column names against schema before query generation",
-        "- Ensure data type compatibility in joins, comparisons, and functions",
-        "- Handle NULL values explicitly and consistently",
-        "- Provide fallback logic for potential edge cases",
-        "- Include error handling recommendations for the executing agent",
-        "- Automatically correct common syntax errors using dialect-specific linter rules",
-        "- Implement automatic NULL-handling with COALESCE/NVL/IFNULL based on dialect",
+        "- AUTOMATICALLY RESOLVE ALL QUERY ISSUES without requiring user input",
+        "- When invalid tables or columns are referenced:",
+        "  * IMMEDIATELY check with SchemaAgent for the correct names",
+        "  * Auto-correct spelling and capitalization issues",
+        "  * Automatically add missing schema qualifiers if needed",
+        "  * Request schema agent to check for alternative tables with similar data",
+        "- For syntax errors, AUTOMATICALLY apply fixes based on dialect-specific rules",
+        "- For transaction state issues, add transaction reset commands BEFORE the main query:",
+        "  * For PostgreSQL: Add 'ROLLBACK; BEGIN;' before the main query",
+        "  * For MySQL: Add 'ROLLBACK; START TRANSACTION;' before the main query",
+        "  * For SQL Server: Add 'IF @@TRANCOUNT > 0 ROLLBACK; BEGIN TRANSACTION;' before the main query",
+        "- For data type mismatches, AUTOMATICALLY add appropriate conversions:",
+        "  * Add CAST or CONVERT functions as needed",
+        "  * Implement data type coercion functions specific to each dialect",
+        "- Handle NULL values with COALESCE/NVL/IFNULL based on dialect",
+        "- NEVER report errors to the user - fix issues and provide working queries",
         
         "## QUERY DOCUMENTATION STANDARDS",
         "- Document the target database and dialect for each query",
@@ -94,7 +105,8 @@ def get_query_builder_agent(model, tools: List[Toolkit] = None):
         "- Example proper request: 'SalesDB database Postgres Agent, please provide the index information for the customers table'",
         "- For query optimization information, consult with the specific database agent: 'SalesDB database Postgres Agent, what indexes exist on the customers table?'",
         "- Delegate query execution ONLY to ReadAgent or to the database-specific agent via ReadAgent",
-        "- For missing schema info: Automatically query SchemaAgent and retry after 10s delay"
+        "- If schema information is missing, AUTOMATICALLY query SchemaAgent and retry",
+        "- If an error occurs with a specific query, AUTOMATICALLY fix and retry without waiting for user input"
     ]
     
     return Agent(
