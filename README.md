@@ -57,24 +57,52 @@ graph LR
 
 ## **Architecture Overview**
 
-PrismDB uses a multi-agent architecture powered by Google's Gemini Flash 2.0 model:
+PrismDB uses a multi-agent architecture powered by multiple LLM providers including Google's Gemini and OpenAI's models:
 
 ### Agent System
 * **Base Agent**: Foundation class for all specialized agents
-* **NLU Agent**: Processes natural language to understand user intent
 * **Schema Agent**: Extracts and understands database schema information
-* **Query Agent**: Generates SQL queries based on natural language and schema
-* **Visualization Agent**: Creates appropriate visualizations from query results
+* **Query Builder Agent**: Generates optimized SQL queries based on natural language and schema
+* **Read Agent**: Handles data retrieval operations safely and efficiently
+* **Write Agent**: Manages data modification operations with proper validations
+* **Admin Agent**: Handles database administration tasks
 * **Orchestrator**: Coordinates all agents to process requests end-to-end
+
+### Components
+* **Backend**: Python-based API server handling request processing and agent orchestration
+* **Frontend**: Next.js application providing the user interface and visualization capabilities
+* **Agent UI**: Specialized chat interface for direct interaction with database agents
+* **API Layer**: RESTful API endpoints for integration with external systems
 
 ### Services
 * **Database Service**: Manages connections to multiple databases
 * **Execution Service**: Executes SQL queries securely and efficiently
 * **Visualization Service**: Renders charts and visualizations
+* **Authentication Service**: Handles user authentication and authorization
 
 ### Security & Authentication
 * **JWT-based authentication**: Secure access with fine-grained permissions
 * **Role-based access control**: Control which databases users can access
+
+---
+
+## **Project Structure**
+
+```
+prismdb/
+├── api/                 # API endpoints and routing
+├── app/                 # Core application logic
+├── frontend/            # Main user interface (Next.js)
+├── prism-framework/     # Agent framework
+│   ├── agent-ui/        # Specialized chat interface
+│   ├── agents/          # Agent implementations
+│   │   ├── prismagent.py   # Main orchestration agent
+│   │   ├── schema_agent.py # Schema handling agent
+│   │   └── ...
+│   └── tools/           # Agent tools and utilities
+├── sampledata/          # Example datasets for demonstration
+└── requirements.txt     # Python dependencies
+```
 
 ---
 
@@ -83,8 +111,8 @@ PrismDB uses a multi-agent architecture powered by Google's Gemini Flash 2.0 mod
 ### Prerequisites
 - Python 3.9+
 - PostgreSQL (for database storage)
-- Redis (for token storage and caching)
-- Google Gemini API key ([Get one here](https://ai.google.dev/))
+- Node.js 18+ (for frontend and agent-ui)
+- Google Gemini API key or OpenAI API key
 
 ### 1. Clone the Repository
 ```bash
@@ -95,15 +123,15 @@ cd prismdb
 ### 2. Set Up a Virtual Environment
 ```bash
 # On Linux/macOS
-python3 -m venv .venv
-source .venv/bin/activate
+python3 -m venv prism.venv
+source prism.venv/bin/activate
 
 # On Windows
-python -m venv .venv
-.venv\Scripts\activate
+python -m venv prism.venv
+prism.venv\Scripts\activate
 ```
 
-### 3. Install Dependencies
+### 3. Install Backend Dependencies
 ```bash
 pip install -r requirements.txt
 ```
@@ -118,18 +146,15 @@ Edit the `.env` file with your configuration:
 ```
 # Required API keys
 GOOGLE_API_KEY=your_google_api_key_here
+# Or for OpenAI
+OPENAI_API_KEY=your_openai_api_key_here
 
 # Database configuration
 DATABASE_URL=postgresql://username:password@localhost:5432/prismdb
 
-# Redis configuration
-REDIS_URL=redis://localhost:6379/0
-
 # Application configuration
 SECRET_KEY=your_secure_random_string_here
 JWT_SECRET_KEY=another_secure_random_string_here
-FLASK_ENV=development  # Use 'production' for production
-PORT=5000
 ```
 
 ### 5. Set Up the Database
@@ -157,24 +182,50 @@ GRANT ALL PRIVILEGES ON DATABASE prismdb TO prismuser;
 \q
 ```
 
-### 6. Set Up Redis
-Install Redis:
-```bash
-# On Ubuntu
-sudo apt update
-sudo apt install redis-server
+### 6. Install Frontend Dependencies
 
-# On macOS with Homebrew
-brew install redis
-brew services start redis
+```bash
+# For the main frontend
+cd frontend
+npm install
+# or with pnpm
+pnpm install
+
+# For the agent UI
+cd ../prism-framework/agent-ui
+npm install
+# or with pnpm
+pnpm install
 ```
 
 ### 7. Start the Application
+
+Start the backend:
 ```bash
-python run.py
+# From the project root
+python app/main.py
 ```
 
-The application will be running at `http://localhost:5000`
+Start the frontend:
+```bash
+# In the frontend directory
+cd frontend
+npm run dev
+# or with pnpm
+pnpm dev
+```
+
+Start the agent UI (optional):
+```bash
+# In the agent-ui directory
+cd prism-framework/agent-ui
+npm run dev
+# or with pnpm
+pnpm dev
+```
+
+The main application will be running at `http://localhost:8000`
+The agent UI will be running at `http://localhost:3000`
 
 ---
 
