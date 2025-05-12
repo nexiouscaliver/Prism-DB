@@ -1,12 +1,12 @@
 'use client'
 
-import React from "react";
-import { useEffect } from 'react';
+import React, { useEffect, useState } from "react";
 import { useRouter } from 'next/navigation';
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { useAuthStore } from '@/store/auth-store';
 import dynamic from 'next/dynamic';
+import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 // Importing UI components
 import { Button } from "@/components/ui/button";
@@ -24,9 +24,61 @@ const AgentWorkflowDiagram = dynamic(
   }
 );
 
+// TypeScript interfaces for data
+interface QueryData {
+  type: "bar" | "pie" | "table" | "scatter";
+  labels?: string[];
+  values?: number[];
+  rows?: string[][];
+  title: string;
+  unit?: string;
+  dataType?: string;
+  sqlQuery: string;
+  executionTime: string;
+  insight: string;
+  recommendation: string;
+}
+
+interface DemoQuery {
+  id: number;
+  query: string;
+  data: QueryData;
+}
+
 export default function Home() {
   const { isAuthenticated } = useAuthStore();
   const router = useRouter();
+  
+  // State for interactive demo section
+  const [selectedQuery, setSelectedQuery] = useState(1);
+  const [customQuery, setCustomQuery] = useState("");
+  const [executingQuery, setExecutingQuery] = useState(false);
+  
+  // Get current query data and ensure it has defined properties
+  const currentQueryData = demoQueries.find(q => q.id === selectedQuery)?.data || demoQueries[0].data;
+  
+  // Ensure values are defined with fallbacks
+  const currentValues = currentQueryData.values || [];
+  const currentLabels = currentQueryData.labels || [];
+  const currentRows = currentQueryData.rows || [];
+  
+  // Function to handle selecting a query
+  const handleQuerySelect = (id: number) => {
+    setSelectedQuery(id);
+  };
+  
+  // Function to handle custom query submission
+  const handleCustomQuerySubmit = () => {
+    if (customQuery.trim() === "") return;
+    
+    setExecutingQuery(true);
+    
+    // Simulate query execution delay and redirect to login
+    setTimeout(() => {
+      setExecutingQuery(false);
+      router.push('/auth/login');
+    }, 800);
+  };
   
   useEffect(() => {
     if (isAuthenticated) {
@@ -238,20 +290,289 @@ export default function Home() {
 
       {/* Demo Section */}
       <section id="demo" className="py-20 bg-gradient-to-b from-purple-950/20 to-black relative">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-6xl text-center">
-          <h2 className="text-3xl md:text-4xl font-bold text-white mb-6">
-            See Prism Framework In Action
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-6xl">
+          <h2 className="text-3xl md:text-4xl font-bold text-white mb-6 text-center">
+            Experience PrismDB In Action
           </h2>
-          <p className="text-zinc-300 mb-12 max-w-3xl mx-auto">
-            Watch how our AI-powered agents transform natural language into powerful database insights, visualizations, and automated analysis.
+          <p className="text-zinc-300 mb-12 max-w-3xl mx-auto text-center">
+            See how our AI-powered agents transform natural language into powerful database insights, visualizations, and automated analysis.
           </p>
-          <div className="mx-auto max-w-4xl aspect-video rounded-xl overflow-hidden border border-white/10">
-            <div className="h-full w-full bg-black/70 flex items-center justify-center">
-              <div className="text-center">
-                <div className="text-6xl mb-4">▶️</div>
-                <p className="text-white/70">Demo video coming soon</p>
+
+          <div className="grid md:grid-cols-2 gap-8 md:gap-12 items-center">
+            {/* Left side: Interactive query demonstration */}
+            <motion.div 
+              className="bg-black/40 backdrop-blur-sm rounded-xl border border-white/10 overflow-hidden"
+              initial={{ opacity: 0, x: -20 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.6 }}
+              viewport={{ once: true }}
+            >
+              <div className="p-5 border-b border-white/10 flex justify-between items-center">
+                <div className="flex items-center space-x-2">
+                  <div className="flex space-x-1.5">
+                    <div className="w-3 h-3 rounded-full bg-red-500"></div>
+                    <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
+                    <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                  </div>
+                  <span className="text-sm text-zinc-400">PrismDB Query Interface</span>
+                </div>
               </div>
-            </div>
+              <div className="p-5 space-y-4">
+                {/* Example queries */}
+                <div>
+                  <h4 className="text-sm text-zinc-400 mb-2">Example Queries:</h4>
+                  <div className="space-y-2">
+                    {demoQueries.map((item) => (
+                      <div 
+                        key={item.id} 
+                        className={`text-sm p-2 rounded-lg cursor-pointer transition-colors border ${
+                          selectedQuery === item.id 
+                            ? "bg-primary/20 border-primary/50 text-white" 
+                            : "bg-white/5 border-white/5 hover:bg-primary/10 hover:border-primary/40"
+                        }`}
+                        onClick={() => handleQuerySelect(item.id)}
+                      >
+                        {item.query}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                
+                {/* Interactive query box */}
+                <div className="relative mt-6">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                  </div>
+                  <input 
+                    type="text" 
+                    placeholder="Ask a question about your data..." 
+                    className="block w-full pl-10 pr-12 py-3 border border-white/10 rounded-lg bg-black/30 text-white text-sm focus:ring-2 focus:ring-primary/50 focus:border-transparent focus:outline-none"
+                    value={customQuery}
+                    onChange={(e) => setCustomQuery(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        handleCustomQuerySubmit();
+                      }
+                    }}
+                  />
+                  <div className="absolute inset-y-0 right-0 flex items-center pr-3">
+                    <button 
+                      className="p-1 rounded-md bg-primary/20 hover:bg-primary/30 text-primary transition-colors"
+                      onClick={handleCustomQuerySubmit}
+                      disabled={executingQuery}
+                    >
+                      {executingQuery ? (
+                        <svg className="animate-spin h-5 w-5 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                      ) : (
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                        </svg>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* Right side: Results visualization */}
+            <motion.div 
+              className="bg-black/40 backdrop-blur-sm rounded-xl border border-white/10 overflow-hidden"
+              initial={{ opacity: 0, x: 20 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.6, delay: 0.2 }}
+              viewport={{ once: true }}
+            >
+              <div className="p-5 border-b border-white/10">
+                <h3 className="text-white text-sm">Query Results & Visualizations</h3>
+              </div>
+              <div className="p-5 space-y-6">
+                {/* Visualization result */}
+                <div className="aspect-[4/3] rounded-lg bg-gradient-to-tr from-indigo-950/40 to-purple-900/40 border border-white/5 flex items-center justify-center p-6">
+                  <div className="flex flex-col space-y-5 w-full">
+                    {/* Conditional chart rendering based on data type */}
+                    {currentQueryData.type === "bar" && currentValues ? (
+                      <div className="w-full">
+                        <ResponsiveContainer width="100%" height={200}>
+                          <ScatterChart
+                            margin={{
+                              top: 10,
+                              right: 30,
+                              left: 0,
+                              bottom: 30,
+                            }}
+                          >
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis 
+                              dataKey="x" 
+                              type="category" 
+                              name="Category" 
+                              allowDuplicatedCategory={false}
+                              tick={{fill: '#9ca3af', fontSize: 10}}
+                            />
+                            <YAxis 
+                              dataKey="y" 
+                              name="Value" 
+                              tick={{fill: '#9ca3af', fontSize: 10}}
+                            />
+                            <Tooltip 
+                              cursor={{ strokeDasharray: '3 3' }} 
+                              contentStyle={{
+                                backgroundColor: '#111',
+                                borderColor: 'rgba(255, 255, 255, 0.1)',
+                                color: '#fff',
+                                fontSize: '12px'
+                              }}
+                            />
+                            <Scatter 
+                              name="Values" 
+                              data={currentLabels.map((label, i) => ({ x: label, y: currentValues[i] }))} 
+                              fill="#8884d8" 
+                              shape="circle"
+                            />
+                          </ScatterChart>
+                        </ResponsiveContainer>
+                        <div className="text-xs text-center text-zinc-500">{currentQueryData.title}</div>
+                      </div>
+                    ) : null}
+
+                    {currentQueryData.type === "pie" && currentValues ? (
+                      <div className="flex flex-col items-center justify-center h-full">
+                        <div className="relative w-40 h-40 mb-4">
+                          <svg viewBox="0 0 100 100" className="w-full h-full">
+                            {currentValues.map((value, i, arr) => {
+                              // Calculate the slice
+                              const total = arr.reduce((a, b) => a + b, 0);
+                              const startPercent = arr.slice(0, i).reduce((a, b) => a + b, 0) / total;
+                              const endPercent = startPercent + value / total;
+                              
+                              const startX = 50 + 40 * Math.cos(2 * Math.PI * startPercent);
+                              const startY = 50 + 40 * Math.sin(2 * Math.PI * startPercent);
+                              const endX = 50 + 40 * Math.cos(2 * Math.PI * endPercent);
+                              const endY = 50 + 40 * Math.sin(2 * Math.PI * endPercent);
+                              
+                              // Large arc flag is 1 if slice is > 50%
+                              const largeArcFlag = endPercent - startPercent > 0.5 ? 1 : 0;
+                              
+                              // Colors for pie slices
+                              const colors = [
+                                "rgb(124, 58, 237)", // purple-600
+                                "rgb(79, 70, 229)",  // indigo-600
+                                "rgb(37, 99, 235)",  // blue-600
+                                "rgb(16, 185, 129)", // emerald-600
+                                "rgb(245, 158, 11)", // amber-600
+                                "rgb(239, 68, 68)"   // red-600
+                              ];
+                              
+                              // SVG path for the slice
+                              return (
+                                <path
+                                  key={i}
+                                  d={`M 50 50 L ${startX} ${startY} A 40 40 0 ${largeArcFlag} 1 ${endX} ${endY} Z`}
+                                  fill={colors[i % colors.length]}
+                                  stroke="#000"
+                                  strokeWidth="0.5"
+                                  opacity={0.8 + (i * 0.03)}
+                                />
+                              );
+                            })}
+                          </svg>
+                        </div>
+                        
+                        {/* Legend */}
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                          {currentLabels.map((label, i) => (
+                            <div key={i} className="flex items-center text-xs space-x-1">
+                              <div className={`w-2 h-2 rounded-full`} style={{
+                                backgroundColor: ["rgb(124, 58, 237)", "rgb(79, 70, 229)", "rgb(37, 99, 235)", 
+                                "rgb(16, 185, 129)", "rgb(245, 158, 11)", "rgb(239, 68, 68)"][i % 6]
+                              }}></div>
+                              <span className="text-zinc-400">
+                                {label} {currentValues && `(${currentValues[i]}${currentQueryData.unit || ''})`}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                        
+                        <div className="text-xs text-center text-zinc-500 mt-2">{currentQueryData.title}</div>
+                      </div>
+                    ) : null}
+
+                    {currentQueryData.type === "table" && currentRows ? (
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-xs text-left text-zinc-400">
+                          <thead className="text-xs text-zinc-300 border-b border-white/10">
+                            <tr>
+                              {currentLabels.map((label, i) => (
+                                <th key={i} className="px-2 py-2">{label}</th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {currentRows.map((row, i) => (
+                              <tr key={i} className="border-b border-white/5">
+                                {row.map((cell, j) => (
+                                  <td key={j} className="px-2 py-2">{cell}</td>
+                                ))}
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                        <div className="text-xs text-center text-zinc-500 mt-4">{currentQueryData.title}</div>
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
+
+                {/* AI explanation */}
+                <div className="p-4 bg-black/30 rounded-lg border border-white/5">
+                  <div className="flex items-start space-x-3">
+                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/30 flex items-center justify-center">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-medium text-white mb-1">AI Analysis</h4>
+                      <p className="text-xs text-zinc-400 leading-relaxed">
+                        {currentQueryData.insight}
+                        <span className="block mt-1 text-primary">{currentQueryData.recommendation}</span>
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* SQL query info */}
+                <div className="mt-4 pt-4 border-t border-white/5">
+                  <div className="flex justify-between text-xs text-zinc-500">
+                    <span>Generated SQL:</span>
+                    <button 
+                      className="text-primary hover:text-primary/80 transition-colors"
+                      onClick={() => alert(`SQL Query:\n\n${currentQueryData.sqlQuery}`)}
+                    >
+                      View
+                    </button>
+                  </div>
+                  <div className="flex justify-between text-xs text-zinc-500 mt-2">
+                    <span>Execution time:</span>
+                    <span>{currentQueryData.executionTime}</span>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+
+          {/* Try it yourself CTA */}
+          <div className="mt-12 text-center">
+            <Link href="/auth/register">
+              <Button variant="outline" size="lg" className="bg-primary/10 hover:bg-primary/20 text-white border-primary/30">
+                Try It Yourself
+              </Button>
+            </Link>
           </div>
         </div>
       </section>
@@ -547,5 +868,93 @@ const architecture = [
   {
     name: "Analytics & Monitoring",
     description: "Performance monitoring, usage analytics, and system health dashboards."
+  }
+];
+
+// Mock data for demonstration
+const demoQueries: DemoQuery[] = [
+  {
+    id: 1,
+    query: "Show me sales by region for last quarter",
+    data: {
+      type: "bar",
+      labels: ["North", "South", "East", "West", "Central"],
+      values: [45, 52, 38, 59, 47],
+      title: "Sales by Region (Last Quarter)",
+      unit: "K",
+      dataType: "currency",
+      sqlQuery: "SELECT region, SUM(sales) AS total_sales FROM sales WHERE quarter = 'Q4' GROUP BY region ORDER BY region",
+      executionTime: "0.45s",
+      insight: "The Western region shows the highest sales performance at $59K, while the Eastern region is underperforming at $38K compared to other regions.",
+      recommendation: "Consider investigating the sales strategy in the Eastern region to identify improvement opportunities."
+    }
+  },
+  {
+    id: 2,
+    query: "Find customers who haven't ordered in 6 months",
+    data: {
+      type: "table",
+      labels: ["Customer", "Last Order", "Total Orders", "Lifetime Value"],
+      rows: [
+        ["Acme Corp", "May 10, 2023", "32", "$28,450"],
+        ["XYZ Industries", "Apr 22, 2023", "17", "$15,720"],
+        ["Global Solutions", "Apr 15, 2023", "23", "$34,125"],
+        ["Tech Innovations", "Mar 30, 2023", "8", "$12,340"],
+        ["Quantum Enterprises", "Mar 28, 2023", "15", "$20,150"]
+      ],
+      title: "Inactive Customers (6+ Months)",
+      sqlQuery: "SELECT c.name, MAX(o.order_date) as last_order, COUNT(o.id) as total_orders, SUM(o.total) as lifetime_value FROM customers c JOIN orders o ON c.id = o.customer_id GROUP BY c.id HAVING MAX(o.order_date) < DATE_SUB(NOW(), INTERVAL 6 MONTH) ORDER BY last_order DESC LIMIT 5",
+      executionTime: "207ms",
+      insight: "5 high-value customers haven't placed orders in over 6 months. Acme Corp, with 32 previous orders and a lifetime value of $28,450, has been inactive since May 10, 2023.",
+      recommendation: "Initiate a targeted re-engagement campaign for these 5 customers with personalized offers based on their purchase history."
+    }
+  },
+  {
+    id: 3,
+    query: "Create a visualization of website traffic by source",
+    data: {
+      type: "pie",
+      labels: ["Organic Search", "Direct", "Social Media", "Referral", "Email", "Paid Search"],
+      values: [38, 22, 15, 12, 8, 5],
+      title: "Website Traffic by Source",
+      unit: "%",
+      dataType: "percentage",
+      sqlQuery: "SELECT source, COUNT(*) as visits, (COUNT(*) * 100.0 / (SELECT COUNT(*) FROM visits WHERE visit_date >= DATE_SUB(NOW(), INTERVAL 30 DAY))) as percentage FROM visits WHERE visit_date >= DATE_SUB(NOW(), INTERVAL 30 DAY) GROUP BY source ORDER BY visits DESC",
+      executionTime: "156ms",
+      insight: "Organic search drives 38% of your website traffic, followed by direct visits at 22%. Social media contributes 15%, but paid search only accounts for 5% of total traffic.",
+      recommendation: "Consider reallocating some of your paid search budget to social media campaigns which show better engagement and conversion rates."
+    }
+  },
+  {
+    id: 4,
+    query: "Which products have the highest profit margin?",
+    data: {
+      type: "bar",
+      labels: ["Premium Software", "Enterprise Security", "Cloud Storage", "Analytics Dashboard", "Developer API"],
+      values: [72, 68, 55, 48, 43],
+      title: "Top 5 Products by Profit Margin",
+      unit: "%",
+      dataType: "percentage",
+      sqlQuery: "SELECT p.name, ((p.price - p.cost) / p.price * 100) as margin FROM products p ORDER BY margin DESC LIMIT 5",
+      executionTime: "98ms",
+      insight: "Premium Software has the highest profit margin at 72%, followed by Enterprise Security at 68%. All top 5 products have margins above 40%.",
+      recommendation: "Focus sales efforts on Premium Software and Enterprise Security to maximize profitability. Consider bundle offers that include these high-margin products."
+    }
+  },
+  {
+    id: 5,
+    query: "Compare performance across all stores",
+    data: {
+      type: "bar",
+      labels: ["New York", "Los Angeles", "Chicago", "Houston", "Phoenix", "Philadelphia"],
+      values: [87, 65, 92, 78, 63, 71],
+      title: "Store Performance Index",
+      unit: "",
+      dataType: "score",
+      sqlQuery: "SELECT store_name, (sales_score * 0.4 + customer_satisfaction * 0.3 + efficiency * 0.3) as performance_score FROM store_metrics ORDER BY performance_score DESC",
+      executionTime: "183ms",
+      insight: "Chicago has the highest performance score at 92, followed by New York at 87. Phoenix is underperforming with a score of 63, primarily due to lower customer satisfaction ratings.",
+      recommendation: "Implement the successful customer service practices from the Chicago store in Phoenix to improve its performance metrics."
+    }
   }
 ];
