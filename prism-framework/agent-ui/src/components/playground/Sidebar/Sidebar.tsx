@@ -228,13 +228,20 @@ const Sidebar = () => {
     <motion.aside
       className="relative flex h-screen shrink-0 grow-0 flex-col overflow-hidden px-3 py-3 font-dmmono"
       initial={{ width: '17rem' }}
-      animate={{ width: isCollapsed ? '2.5rem' : '17rem' }}
+      animate={{ 
+        width: isCollapsed ? '2.5rem' : '17rem',
+        overflow: isCollapsed ? 'visible' : 'hidden'
+      }}
       transition={{ type: 'spring', stiffness: 300, damping: 30 }}
     >
       <motion.div
         className="flex h-full flex-col"
         initial={{ opacity: 0, x: -20 }}
-        animate={{ opacity: isCollapsed ? 0 : 1, x: isCollapsed ? -20 : 0 }}
+        animate={{ 
+          opacity: isCollapsed ? 0 : 1, 
+          x: isCollapsed ? -20 : 0,
+          display: isCollapsed ? 'none' : 'flex'
+        }}
         transition={{ duration: 0.3, ease: 'easeInOut' }}
         style={{
           pointerEvents: isCollapsed ? 'none' : 'auto'
@@ -308,7 +315,7 @@ const Sidebar = () => {
       {isCollapsed && (
         <motion.button
           onClick={() => setIsCollapsed(false)}
-          className="absolute bottom-3 left-1/2 -translate-x-1/2 rounded-lg p-2 hover:bg-accent"
+          className="absolute bottom-3 left-1/2 -translate-x-1/2 rounded-lg p-3 bg-accent/40 hover:bg-accent z-10 cursor-pointer"
           aria-label="Expand sidebar"
           type="button"
           whileTap={{ scale: 0.95 }}
