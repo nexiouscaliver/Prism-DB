@@ -25,9 +25,9 @@ const DEMO_USERS = [
   },
   {
     id: '2',
-    username: 'user',
-    email: 'user@prismdb.io',
-    password: 'user123'
+    username: 'Shahil',
+    email: 'shahil@prismdb.io',
+    password: 'shahil123'
   }
 ]
 
