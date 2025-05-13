@@ -1,4 +1,4 @@
-# Contributing to Agent UI
+# Contributing to PrismDB Agent UI
 
 Contributions are welcome! Please feel free to submit a Pull Request or raise an issue.
 
