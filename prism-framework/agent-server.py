@@ -1,3 +1,21 @@
+"""
+PrismDB Agent Server
+
+This module initializes and starts the PrismDB agent server, which provides 
+a playground interface for interacting with the database agents.
+
+The server:
+1. Initializes multiple agents with different LLM backends (GPT-4o-mini, Gemini Flash)
+2. Creates a playground interface for these agents
+3. Applies authentication middleware for security
+4. Serves the playground app on a local server
+
+Usage:
+    python agent-server.py
+
+This starts the agent server on the default port (7777).
+"""
+
 from agno.playground import Playground, serve_playground_app
 import logging  # Import standard logging
 

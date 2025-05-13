@@ -1,3 +1,24 @@
+"""
+PrismDB Main Agent Implementation
+
+This module implements the core PrismDB agent orchestration system. It provides the functionality
+to create and manage a team of specialized agents that work together to process natural language
+queries against databases.
+
+Key components:
+- Agent team creation with specialized roles (Schema, Query Builder, Read, Write, Admin)
+- Model selection logic supporting multiple LLM providers (OpenAI, Anthropic, Google, DeepSeek)
+- Agent memory and knowledge management integrations
+- Team coordination and orchestration logic
+
+The module exports two main functions:
+- get_prism_agent(): Creates a single orchestrator agent
+- get_prism_agents(): Creates a team of specialized agents
+
+Each agent is initialized with role-specific instructions and tools to perform
+database operations efficiently and safely.
+"""
+
 from textwrap import dedent
 from typing import Optional, List, Dict
 
